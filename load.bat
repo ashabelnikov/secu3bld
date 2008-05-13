@@ -1,0 +1,1 @@
+avreal32.exe -as -p1 +atmega16 -o16MHZ -e -w seculdr.hex
