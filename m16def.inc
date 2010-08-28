@@ -1,13 +1,13 @@
 ;***** THIS IS A MACHINE GENERATED FILE - DO NOT EDIT ********************
-;***** Created: 2005-11-04 09:37 ******* Source: ATmega16.xml ************
+;***** Created: 2005-01-11 10:30 ******* Source: ATmega16.xml ************
 ;*************************************************************************
 ;* A P P L I C A T I O N   N O T E   F O R   T H E   A V R   F A M I L Y
 ;* 
 ;* Number            : AVR000
 ;* File Name         : "m16def.inc"
 ;* Title             : Register/Bit Definitions for the ATmega16
-;* Date              : 2005-11-04
-;* Version           : 2.21
+;* Date              : 2005-01-11
+;* Version           : 2.14
 ;* Support E-mail    : avr@atmel.com
 ;* Target MCU        : ATmega16
 ;* 
@@ -58,8 +58,8 @@
 ; Definitions marked "MEMORY MAPPED"are extended I/O ports
 ; and cannot be used with IN/OUT instructions
 .equ	SREG	= 0x3f
-.equ	SPL	= 0x3d
 .equ	SPH	= 0x3e
+.equ	SPL	= 0x3d
 .equ	OCR0	= 0x3c
 .equ	GICR	= 0x3b
 .equ	GIFR	= 0x3a
@@ -76,14 +76,14 @@
 .equ	SFIOR	= 0x30
 .equ	TCCR1A	= 0x2f
 .equ	TCCR1B	= 0x2e
-.equ	TCNT1L	= 0x2c
 .equ	TCNT1H	= 0x2d
-.equ	OCR1AL	= 0x2a
+.equ	TCNT1L	= 0x2c
 .equ	OCR1AH	= 0x2b
-.equ	OCR1BL	= 0x28
+.equ	OCR1AL	= 0x2a
 .equ	OCR1BH	= 0x29
-.equ	ICR1L	= 0x26
+.equ	OCR1BL	= 0x28
 .equ	ICR1H	= 0x27
+.equ	ICR1L	= 0x26
 .equ	TCCR2	= 0x25
 .equ	TCNT2	= 0x24
 .equ	OCR2	= 0x23
@@ -91,8 +91,8 @@
 .equ	WDTCR	= 0x21
 .equ	UBRRH	= 0x20
 .equ	UCSRC	= 0x20
-.equ	EEARL	= 0x1e
 .equ	EEARH	= 0x1f
+.equ	EEARL	= 0x1e
 .equ	EEDR	= 0x1d
 .equ	EECR	= 0x1c
 .equ	PORTA	= 0x1b
@@ -298,6 +298,10 @@
 ;.equ	PSR10	= 0	; Prescaler reset
 .equ	PSR2	= 1	; Prescaler reset
 .equ	PUD	= 2	; Pull-up Disable
+.equ	ADHSM	= 3	; ADC High Speed Mode
+.equ	ADTS0	= 5	; ADC High Speed Mode
+.equ	ADTS1	= 6	; ADC Auto Trigger Source
+.equ	ADTS2	= 7	; ADC Auto Trigger Source
 
 
 ; ***** TIMER_COUNTER_2 **************
@@ -523,7 +527,6 @@
 .equ	REFS1	= 7	; Reference Selection Bit 1
 
 ; ADCSRA - The ADC Control and Status register
-.equ	ADCSR	= ADCSRA	; For compatibility
 .equ	ADPS0	= 0	; ADC  Prescaler Select Bits
 .equ	ADPS1	= 1	; ADC  Prescaler Select Bits
 .equ	ADPS2	= 2	; ADC  Prescaler Select Bits
@@ -553,11 +556,6 @@
 .equ	ADCL5	= 5	; ADC Data Register Low Byte Bit 5
 .equ	ADCL6	= 6	; ADC Data Register Low Byte Bit 6
 .equ	ADCL7	= 7	; ADC Data Register Low Byte Bit 7
-
-; SFIOR - Special Function IO Register
-.equ	ADTS0	= 5	; ADC Auto Trigger Source 0
-.equ	ADTS1	= 6	; ADC Auto Trigger Source 1
-.equ	ADTS2	= 7	; ADC Auto Trigger Source 2
 
 
 ; ***** JTAG *************************

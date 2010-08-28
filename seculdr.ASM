@@ -22,55 +22,66 @@
 
 ;          Описание команд реализуемых через UART
 ;   Программирование указанной страницы памяти программ 
-;    !PNN(data)<CS               size    dir
-;    P    - код команды           1      in
-;    NN   - номер страницы        1      in
-;    data - данные страницы       128    in
-;    <CS  - контрольная сумма     1      out
+;    !PNN(data)<CS               size     dir
+;    P    - код команды           1       in
+;    NN   - номер страницы        1       in
+;    data - данные страницы      256max   in
+;    <CS  - контрольная сумма     1       out
 ;    перед посылкой блока данных необходимо подождать завершения стирания - 3-4 мс
 
 ;   Чтение указанной страницы памяти программ
-;    !RNN<(data)CS               size   dir
-;    R    - код команды           1      in
-;    NN   - номер страницы        1      in
-;    data - данные страницы       128    out
-;    CS   - контрольная сумма     1      out
+;    !RNN<(data)CS               size     dir
+;    R    - код команды           1       in
+;    NN   - номер страницы        1       in
+;    data - данные страницы      256max   out
+;    CS   - контрольная сумма     1       out
 
 ;   Выход из загрузчика и запуск основной программы
-;    !T<@                        size   dir
-;    T    - код команды           1      in
-;    <@   - подтверждение вых.    1      out
+;    !T<@                        size     dir
+;    T    - код команды           1       in
+;    <@   - подтверждение вых.    1       out
 
-;   Чтение 512 байт EEPROM
-;    !J<(data)CS                 size   dir
-;    J    - код команды           1      in
-;    data - данные EEPROM         512    out
-;    CS   - контрольная сумма     1      out
+;   Чтение содержимого EEPROM
+;    !J<(data)CS                 size     dir
+;    J    - код команды           1       in
+;    data - данные EEPROM       2048max   out
+;    CS   - контрольная сумма     1       out
                                 
-;   Запись 512 байт EEPROM       
-;    !W(data)<CS                 size   dir 
-;    W    - код команды           1      in
-;    data - данные EEPROM         512    in
-;    <CS  - контрольная сумма     1      out
+;   Запись запись содержимого EEPROM       
+;    !W(data)<CS                 size     dir 
+;    W    - код команды           1       in
+;    data - данные EEPROM       2048max   in
+;    <CS  - контрольная сумма     1       out
 ;    после посылки каждого байта необходимо подождать 10ms
 
 ;   Передача информации о бутлоадере
-;   !I<(data)                    size    dir
-;   I   - код команды             1      in
-;   data - передав. информация    24     out
+;   !I<(data)                    size     dir
+;   I   - код команды             1       in
+;   data - передав. информация    24      out
 
 
 
 ;   если возникает ошибка то посылается <?
 ;
 
-.INCLUDE "m16def.inc"            
+#ifdef _PLATFORM_M16_
+.INCLUDE "m16def.inc"
+#message "ATMega16 platform used"  
+#elif _PLATFORM_M32_
+.INCLUDE "m32def.inc"
+#message "ATMega32 platform used" 
+#elif _PLATFORM_M64_
+.INCLUDE "m64def.inc"
+#message "ATMega64 platform used" 
+#else
+ #error "Wrong platform identifier!"
+#endif
  
 .equ    LDR_P_INIT = 3                    ;линия порта C для старта загрузчика при старте
 .equ    PAGESIZEB  = PAGESIZE*2           ;PAGESIZEB is page size in BYTES, not words
 .equ    UBR        = 0x67                 ;скорость UART-a - 9600 бод 
 
-        .org  SECONDBOOTSTART              ;начало кода загрузчика        
+        .org  SECONDBOOTSTART             ;начало кода загрузчика        
         cli                               ;прерывания не используются
         
      	clr   R0
@@ -437,4 +448,4 @@ L90:
 	ret
 
 ; размер должен быть 24 |----------------------|       
-info:             .db  "Boot loader v1.1.[05.08]",0,0
+info:             .db  "Boot loader v1.2.[08.10]",0,0

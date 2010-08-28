@@ -1,13 +1,13 @@
 ;***** THIS IS A MACHINE GENERATED FILE - DO NOT EDIT ********************
-;***** Created: 2009-12-11 15:36 ******* Source: ATmega32.xml ************
+;***** Created: 2005-01-11 10:31 ******* Source: ATmega32.xml ************
 ;*************************************************************************
 ;* A P P L I C A T I O N   N O T E   F O R   T H E   A V R   F A M I L Y
 ;* 
 ;* Number            : AVR000
 ;* File Name         : "m32def.inc"
 ;* Title             : Register/Bit Definitions for the ATmega32
-;* Date              : 2009-12-11
-;* Version           : 2.35
+;* Date              : 2005-01-11
+;* Version           : 2.14
 ;* Support E-mail    : avr@atmel.com
 ;* Target MCU        : ATmega32
 ;* 
@@ -58,8 +58,8 @@
 ; Definitions marked "MEMORY MAPPED"are extended I/O ports
 ; and cannot be used with IN/OUT instructions
 .equ	SREG	= 0x3f
-.equ	SPL	= 0x3d
 .equ	SPH	= 0x3e
+.equ	SPL	= 0x3d
 .equ	OCR0	= 0x3c
 .equ	GICR	= 0x3b
 .equ	GIFR	= 0x3a
@@ -76,14 +76,14 @@
 .equ	SFIOR	= 0x30
 .equ	TCCR1A	= 0x2f
 .equ	TCCR1B	= 0x2e
-.equ	TCNT1L	= 0x2c
 .equ	TCNT1H	= 0x2d
-.equ	OCR1AL	= 0x2a
+.equ	TCNT1L	= 0x2c
 .equ	OCR1AH	= 0x2b
-.equ	OCR1BL	= 0x28
+.equ	OCR1AL	= 0x2a
 .equ	OCR1BH	= 0x29
-.equ	ICR1L	= 0x26
+.equ	OCR1BL	= 0x28
 .equ	ICR1H	= 0x27
+.equ	ICR1L	= 0x26
 .equ	TCCR2	= 0x25
 .equ	TCNT2	= 0x24
 .equ	OCR2	= 0x23
@@ -91,8 +91,8 @@
 .equ	WDTCR	= 0x21
 .equ	UBRRH	= 0x20
 .equ	UCSRC	= 0x20
-.equ	EEARL	= 0x1e
 .equ	EEARH	= 0x1f
+.equ	EEARL	= 0x1e
 .equ	EEDR	= 0x1d
 .equ	EECR	= 0x1c
 .equ	PORTA	= 0x1b
@@ -234,12 +234,10 @@
 .equ	CS20	= 0	; Clock Select bit 0
 .equ	CS21	= 1	; Clock Select bit 1
 .equ	CS22	= 2	; Clock Select bit 2
-.equ	WGM21	= 3	; Clear Timer/Counter2 on Compare Match
-.equ	CTC2	= WGM21	; For compatibility
+.equ	CTC2	= 3	; Clear Timer/Counter2 on Compare Match
 .equ	COM20	= 4	; Compare Output Mode bit 0
 .equ	COM21	= 5	; Compare Output Mode bit 1
-.equ	WGM20	= 6	; Pulse Width Modulator Enable
-.equ	PWM2	= WGM20	; For compatibility
+.equ	PWM2	= 6	; Pulse Width Modulator Enable
 .equ	FOC2	= 7	; Force Output Compare
 
 ; TCNT2 - Timer/Counter2
@@ -291,7 +289,7 @@
 .equ	FOC1A	= 3	; Force Output Compare 1A
 .equ	COM1B0	= 4	; Compare Output Mode 1B, bit 0
 .equ	COM1B1	= 5	; Compare Output Mode 1B, bit 1
-.equ	COM1A0	= 6	; Compare Ouput Mode 1A, bit 0
+.equ	COM1A0	= 6	; Comparet Ouput Mode 1A, bit 0
 .equ	COM1A1	= 7	; Compare Output Mode 1A, bit 1
 
 ; TCCR1B - Timer/Counter1 Control Register B
@@ -381,6 +379,54 @@
 
 .equ	UBRRHI	= UBRRH	; For compatibility
 
+; ***** TWI **************************
+; TWBR - TWI Bit Rate register
+.equ	TWBR0	= 0	; 
+.equ	TWBR1	= 1	; 
+.equ	TWBR2	= 2	; 
+.equ	TWBR3	= 3	; 
+.equ	TWBR4	= 4	; 
+.equ	TWBR5	= 5	; 
+.equ	TWBR6	= 6	; 
+.equ	TWBR7	= 7	; 
+
+; TWCR - TWI Control Register
+.equ	TWIE	= 0	; TWI Interrupt Enable
+.equ	TWEN	= 2	; TWI Enable Bit
+.equ	TWWC	= 3	; TWI Write Collition Flag
+.equ	TWSTO	= 4	; TWI Stop Condition Bit
+.equ	TWSTA	= 5	; TWI Start Condition Bit
+.equ	TWEA	= 6	; TWI Enable Acknowledge Bit
+.equ	TWINT	= 7	; TWI Interrupt Flag
+
+; TWSR - TWI Status Register
+.equ	TWS3	= 3	; TWI Status
+.equ	TWS4	= 4	; TWI Status
+.equ	TWS5	= 5	; TWI Status
+.equ	TWS6	= 6	; TWI Status
+.equ	TWS7	= 7	; TWI Status
+
+; TWDR - TWI Data register
+.equ	TWD0	= 0	; TWI Data Register Bit 0
+.equ	TWD1	= 1	; TWI Data Register Bit 1
+.equ	TWD2	= 2	; TWI Data Register Bit 2
+.equ	TWD3	= 3	; TWI Data Register Bit 3
+.equ	TWD4	= 4	; TWI Data Register Bit 4
+.equ	TWD5	= 5	; TWI Data Register Bit 5
+.equ	TWD6	= 6	; TWI Data Register Bit 6
+.equ	TWD7	= 7	; TWI Data Register Bit 7
+
+; TWAR - TWI (Slave) Address register
+.equ	TWGCE	= 0	; TWI General Call Recognition Enable Bit
+.equ	TWA0	= 1	; TWI (Slave) Address register Bit 0
+.equ	TWA1	= 2	; TWI (Slave) Address register Bit 1
+.equ	TWA2	= 3	; TWI (Slave) Address register Bit 2
+.equ	TWA3	= 4	; TWI (Slave) Address register Bit 3
+.equ	TWA4	= 5	; TWI (Slave) Address register Bit 4
+.equ	TWA5	= 6	; TWI (Slave) Address register Bit 5
+.equ	TWA6	= 7	; TWI (Slave) Address register Bit 6
+
+
 ; ***** ANALOG_COMPARATOR ************
 ; SFIOR - Special Function IO Register
 .equ	ACME	= 3	; Analog Comparator Multiplexer Enable
@@ -408,7 +454,6 @@
 .equ	REFS1	= 7	; Reference Selection Bit 1
 
 ; ADCSRA - The ADC Control and Status register
-.equ	ADCSR	= ADCSRA	; For compatibility
 .equ	ADPS0	= 0	; ADC  Prescaler Select Bits
 .equ	ADPS1	= 1	; ADC  Prescaler Select Bits
 .equ	ADPS2	= 2	; ADC  Prescaler Select Bits
@@ -438,11 +483,6 @@
 .equ	ADCL5	= 5	; ADC Data Register Low Byte Bit 5
 .equ	ADCL6	= 6	; ADC Data Register Low Byte Bit 6
 .equ	ADCL7	= 7	; ADC Data Register Low Byte Bit 7
-
-; SFIOR - Special Function IO Register
-.equ	ADTS0	= 5	; ADC Auto Trigger Source 0
-.equ	ADTS1	= 6	; ADC Auto Trigger Source 1
-.equ	ADTS2	= 7	; ADC Auto Trigger Source 2
 
 
 ; ***** PORTA ************************
@@ -649,6 +689,9 @@
 .equ	PSR10	= 0	; Prescaler Reset Timer/Counter1&0
 .equ	PSR2	= 1	; Prescaler Reset Timer/Counter2
 .equ	PUD	= 2	; Pull-up Disable
+.equ	ADTS0	= 5	; ADC Auto Trigger Source 0
+.equ	ADTS1	= 6	; ADC Auto Trigger Source 1
+.equ	ADTS2	= 7	; ADC Auto Trigger Source 2
 
 
 ; ***** BOOT_LOAD ********************
@@ -662,56 +705,6 @@
 .equ	RWWSB	= 6	; Read While Write Section Busy
 .equ	ASB	= RWWSB	; For compatibility
 .equ	SPMIE	= 7	; SPM Interrupt Enable
-
-
-; ***** TWI **************************
-; TWBR - TWI Bit Rate register
-.equ	TWBR0	= 0	; 
-.equ	TWBR1	= 1	; 
-.equ	TWBR2	= 2	; 
-.equ	TWBR3	= 3	; 
-.equ	TWBR4	= 4	; 
-.equ	TWBR5	= 5	; 
-.equ	TWBR6	= 6	; 
-.equ	TWBR7	= 7	; 
-
-; TWCR - TWI Control Register
-.equ	TWIE	= 0	; TWI Interrupt Enable
-.equ	TWEN	= 2	; TWI Enable Bit
-.equ	TWWC	= 3	; TWI Write Collition Flag
-.equ	TWSTO	= 4	; TWI Stop Condition Bit
-.equ	TWSTA	= 5	; TWI Start Condition Bit
-.equ	TWEA	= 6	; TWI Enable Acknowledge Bit
-.equ	TWINT	= 7	; TWI Interrupt Flag
-
-; TWSR - TWI Status Register
-.equ	TWPS0	= 0	; TWI Prescaler bits
-.equ	TWPS1	= 1	; TWI Prescaler bits
-.equ	TWS3	= 3	; TWI Status
-.equ	TWS4	= 4	; TWI Status
-.equ	TWS5	= 5	; TWI Status
-.equ	TWS6	= 6	; TWI Status
-.equ	TWS7	= 7	; TWI Status
-
-; TWDR - TWI Data register
-.equ	TWD0	= 0	; TWI Data Register Bit 0
-.equ	TWD1	= 1	; TWI Data Register Bit 1
-.equ	TWD2	= 2	; TWI Data Register Bit 2
-.equ	TWD3	= 3	; TWI Data Register Bit 3
-.equ	TWD4	= 4	; TWI Data Register Bit 4
-.equ	TWD5	= 5	; TWI Data Register Bit 5
-.equ	TWD6	= 6	; TWI Data Register Bit 6
-.equ	TWD7	= 7	; TWI Data Register Bit 7
-
-; TWAR - TWI (Slave) Address register
-.equ	TWGCE	= 0	; TWI General Call Recognition Enable Bit
-.equ	TWA0	= 1	; TWI (Slave) Address register Bit 0
-.equ	TWA1	= 2	; TWI (Slave) Address register Bit 1
-.equ	TWA2	= 3	; TWI (Slave) Address register Bit 2
-.equ	TWA3	= 4	; TWI (Slave) Address register Bit 3
-.equ	TWA4	= 5	; TWI (Slave) Address register Bit 4
-.equ	TWA5	= 6	; TWI (Slave) Address register Bit 5
-.equ	TWA6	= 7	; TWI (Slave) Address register Bit 6
 
 
 
