@@ -265,6 +265,7 @@ Return:
         lds   R16,SPMCR                   ;<--memory mapped
 #else
         in    R16,SPMCR
+        nop                               ;to get the same code size
 #endif
         sbrs  R16,RWWSB
       	rjmp  do_strt_app	          ; Start the application program 
@@ -384,12 +385,12 @@ _h01:   ;цифра
 send_hex:
         push  R16
         push  R17
-        rcall btoh                       ;R17:R16 содержат символы HEX-числа
-        push  R16                        ;сохраняем R16 так как сначала необходимо передать старший байт
+        rcall btoh                        ;R17:R16 содержат символы HEX-числа
+        push  R16                         ;сохраняем R16 так как сначала необходимо передать старший байт
         mov   R16,R17
         rcall uartSend
         pop   R16
-        rcall uartSend                   ;передаем младший байт числа
+        rcall uartSend                    ;передаем младший байт числа
         pop   R17
         pop   R16
         ret 
@@ -401,17 +402,17 @@ recv_hex:
         push  R17
         rcall uartGet
         CPI   R16,'!'
-        breq  new_cmd                    ;получен символ новой команды
+        breq  new_cmd                     ;получен символ новой команды
         mov   R17,R16
         rcall uartGet
         CPI   R16,'!'
-        breq  new_cmd                    ;получен символ новой команды
+        breq  new_cmd                     ;получен символ новой команды
         call  htob
         pop   R17
         ret
 new_cmd:
         pop   R17
-        pop   R16                        ;удаляем из стека содержимое счетчика команд
+        pop   R16                         ;удаляем из стека содержимое счетчика команд
         pop   R16
         rjmp  wait_cc
 
@@ -448,9 +449,10 @@ Page_num:
 Do_spm:
         ;проверка зввершения предидущей SPM операции и ожидание если не завершена
 #ifdef _PLATFORM_M64_
-        lds   R16,SPMCR                  ;<--memory mapped
+        lds   R16,SPMCR                   ;<--memory mapped
 #else
         in    R16,SPMCR
+        nop                               ;to get the same code size
 #endif
         sbrc   R16, SPMEN
         rjmp   Do_spm
@@ -460,9 +462,10 @@ Wait_ee:
         rjmp   Wait_ee
         ;все нормально - реализуем SPM операцию
 #ifdef _PLATFORM_M64_
-        sts   SPMCR, R17                 ;<--memory mapped
+        sts   SPMCR, R17                  ;<--memory mapped
 #else
         out   SPMCR, R17
+        nop                               ;to get the same code size
 #endif
         spm
         ret
@@ -471,24 +474,17 @@ Wait_ee:
 ;Читает или записывает EEPROM
 ;if R17 == 6 then Write, if R17 == 1 then Read
 EepromTalk:
-	out EEARL,R26 		         ; EEARL = address low
-	out EEARH,R27 		         ; EEARH = address high
-	adiw R27:R26,1 		         ; address++
-	sbrc R17,1 		         ; skip if R17 == 1 (read Eeprom)
-	sbi EECR,EEMWE 		         ; EEMWE = 1 (write Eeprom)
-	out EECR,R17 		         ; EECR = R17 (6 write, 1 read)
+	out EEARL,R26 		          ; EEARL = address low
+	out EEARH,R27 		          ; EEARH = address high
+	adiw R27:R26,1 		          ; address++
+	sbrc R17,1 		          ; skip if R17 == 1 (read Eeprom)
+	sbi EECR,EEMWE 		          ; EEMWE = 1 (write Eeprom)
+	out EECR,R17 		          ; EECR = R17 (6 write, 1 read)
 L90:
-	sbic EECR,EEWE 		         ; wait until EEWE == 0
+	sbic EECR,EEWE 		          ; wait until EEWE == 0
 	rjmp L90
-	in R16,EEDR 		         ; R16 = EEDR
+	in R16,EEDR 		          ; R16 = EEDR
 	ret
 
 ; размер должен быть 24 |----------------------|       
 info:             .db  "Boot loader v1.2.[08.10]",0,0 ;[mm.yy]
-
-;Add NOPs to get same size of code for all platforms
-#ifndef _PLATFORM_M64_
-        nop
-        nop
-        nop
-#endif
