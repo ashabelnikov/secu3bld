@@ -11,7 +11,7 @@
 
 ; Для работы загрузчика необходимо:
 ; размер загрузчика зависит от выбранной платформы (mega16, mega32, mega64).
-; BOOTRST = 0, BOOTSZ1 = 1, BOOTSZ0 = 0, JTAGEN = 1, кварц - 16.000 мГц 
+; BOOTRST = 0, BOOTSZ1 = 1, BOOTSZ0 = 0, JTAGEN = 1, WDTON = 1(mega64), M103C = 0(mega64), кварц - 16.000 мГц 
 ; 1 - бит не запрограммирован
 
 ; - При запуске микроконтроллера управление передается загрузчику. Проверяется состояние 
@@ -267,14 +267,20 @@ Return:
         in    R16,SPMCR
 #endif
         sbrs  R16,RWWSB
-      	rjmp  FLASHEND+1	          ; Start the application program
+      	rjmp  do_strt_app	          ; Start the application program 
         ; re-enable the RWW section
         ldi   R17, (1<<RWWSRE) | (1<<SPMEN)
         rcall Do_spm
       	rjmp  Return
 
+        ;Enable watchdog timer and wait for system reset. Note: we rely that safety level 
+        ;is 0 (actual only for mega 64)
+do_strt_app:
+        ldi   R16, (1 << WDE)             ;16 ms
+        out   WDTCR, R16        
+wait_rst:
+        rjmp  wait_rst                    
 
-        rjmp  wait_cmd
         ;------------------------------------------------------------------------------
 CMD500:
         CPI   R16,'I'
@@ -478,4 +484,11 @@ L90:
 	ret
 
 ; размер должен быть 24 |----------------------|       
-info:             .db  "Boot loader v1.2.[08.10]",0,0
+info:             .db  "Boot loader v1.2.[08.10]",0,0 ;[mm.yy]
+
+;Add NOPs to get same size of code for all platforms
+#ifndef _PLATFORM_M64_
+        nop
+        nop
+        nop
+#endif
