@@ -1,6 +1,6 @@
 @echo off
 rem SECU-3 project
-rem Batch file for create C-array with boot loader body.
+rem Batch file for creating of C-array from boot loader's body.
 rem Created by Alexey A. Shabelnikov, Kiev 28 August 2010. 
 
 set LOGFILE=make_c_array.log
