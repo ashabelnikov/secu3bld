@@ -105,19 +105,19 @@
  #error "Wrong platform identifier!"
 #endif
 
-.equ    LDR_P_INIT = 3                    ;линия порта C для старта загрузчика при старте
-.equ    PAGESIZEB  = PAGESIZE*2           ;PAGESIZEB is page size in BYTES, not words
-.equ    UBR        = 0x67                 ;скорость UART-a - 9600 бод
+.equ    LDR_P_INIT = 3                    ; линия порта C для старта загрузчика при старте
+.equ    PAGESIZEB  = PAGESIZE*2           ; PAGESIZEB is page size in BYTES, not words
+.equ    UBR        = 0x67                 ; скорость UART-a - 9600 бод
 
-        .org  SECONDBOOTSTART             ;начало кода загрузчика
-        cli                               ;прерывания не используются
+        .org  SECONDBOOTSTART             ; начало кода загрузчика
+        cli                               ; прерывания не используются
 
-     	clr   R0
-	out   DDRC,R0             	  ;делаем все линии порта C входами
-	sbic  PINC,LDR_P_INIT	       	  ;если 0 то bootloader работает дальше
-      	rjmp  FLASHEND+1	          ;иначе старт основной программы
+        clr   R0
+        out   DDRC,R0                     ; делаем все линии порта C входами
+        sbic  PINC,LDR_P_INIT             ; если 0 то bootloader работает дальше
+        rjmp  FLASHEND+1                  ; иначе старт основной программы
 START_FROM_APP:
-        cli                               ;если мы пришли из программы то прерывания надо обязательно запретить
+        cli                               ; если мы пришли из программы то прерывания надо обязательно запретить
         ;инициализируем указатель стека
         ldi   R24,low(RAMEND)             ; SP = RAMEND
         ldi   R25,high(RAMEND)
@@ -142,8 +142,8 @@ wait_cc:
         CPI   R16,'P'
         brne  CMD100
         ; команда 'P' программирование указанной страницы памяти программ
-        rcall recv_hex                    ;R16 <--- NN
-        rcall page_num                    ;Z <-- номер страницы
+        rcall recv_hex                    ; R16 <--- NN
+        rcall page_num                    ; Z <-- номер страницы
 
         ;стираем страницу
         ldi   R17, (1<<PGERS) | (1<<SPMEN)
@@ -152,27 +152,27 @@ wait_cc:
         ldi   R17, (1<<RWWSRE) | (1<<SPMEN)
         rcall Do_spm
 
-        clr   R20                         ;очистили байт контрольной суммы
+        clr   R20                         ; очистили байт контрольной суммы
         ;Записываем данные из UART-a в буфер страницы
-        ldi   R24, low(PAGESIZEB)         ;ининиализировали счетчик (кол-во байт в странице)
+        ldi   R24, low(PAGESIZEB)         ; ининиализировали счетчик (кол-во байт в странице)
 
 Wr_loop:  ;64(mega16, mega32), 128(mega64) итерации - за одну итерацию два байта (одно слово)
-        rcall recv_hex                    ;R16 <--- LO
+        rcall recv_hex                    ; R16 <--- LO
         mov   R0,R16
         eor   R20,R16
 
-        rcall recv_hex                    ;R16 <--- HI
+        rcall recv_hex                    ; R16 <--- HI
         mov   R1,R16
         eor   R20,R16
 
         ldi   R17, (1<<SPMEN)
         rcall Do_spm
-        adiw  ZH:ZL,2                     ;Z+=2, переход к следующему слову в странице
-        subi  R24,  2                     ;R24-=2, уменьшили счетчик слов 
+        adiw  ZH:ZL,2                     ; Z+=2, переход к следующему слову в странице
+        subi  R24,  2                     ; R24-=2, уменьшили счетчик слов 
         brne  Wr_loop
 
         ; восстанавливаем указатель и производим запись страницы
-        subi  ZL, low(PAGESIZEB)          ;restore pointer
+        subi  ZL, low(PAGESIZEB)          ; restore pointer
         sbci  ZH, high(PAGESIZEB)
 
         ldi   R17, (1<<PGWRT) | (1<<SPMEN)
@@ -192,7 +192,7 @@ CMD100:
         ; команда 'R'- чтение указанной страницы памяти программ
 
         rcall recv_hex
-        rcall page_num                    ;Z <-- номер страницы
+        rcall page_num                    ; Z <-- номер страницы
 
         rcall sendAnswer
 
@@ -200,9 +200,9 @@ CMD100:
         ldi   R17, (1<<RWWSRE) | (1<<SPMEN)
         rcall Do_spm
 
-        clr   R20                         ;очистили байт контрольной суммы
+        clr   R20                         ; очистили байт контрольной суммы
         ; Чтение страницы в UART
-        ldi   R24, low(PAGESIZEB)         ;ининиализировали счетчик
+        ldi   R24, low(PAGESIZEB)         ; ининиализировали счетчик
 Rdloop:  ;64(mega16, mega32), 128(mega64) итерации
         lpm   R16, Z+
         eor   R20,R16
@@ -222,8 +222,8 @@ CMD200:
         ; команда 'J' - чтение EEPROM
 
         rcall sendAnswer
- 
-        clr   R20                         ;очистили байт контрольной суммы
+
+        clr   R20                         ; очистили байт контрольной суммы
         clr   R26
         clr   R27
         ldi   R17,0x01                    ; чтение EEPROM
@@ -231,7 +231,7 @@ L23:
         rcall EepromTalk
         eor   R20,R16              
         rcall send_hex
-        cpi   R27,high(EEPROMEND+1)       ;512? 1024? 2048?
+        cpi   R27,high(EEPROMEND+1)       ; 512? 1024? 2048?
         BRNE  L23
 
         ;передаем байт контрольной суммы
@@ -245,16 +245,16 @@ CMD300:
         brne  CMD400
         ; команда 'W' - запись EEPROM
 
-        clr   R20                         ;очистили байт контрольной суммы
-        clr   R26                         ;инициализировали указатель на ячейки EEPROM
+        clr   R20                         ; очистили байт контрольной суммы
+        clr   R26                         ; инициализировали указатель на ячейки EEPROM
         clr   R27                         ;
-        ldi   R17,0x06                    ;запись EEPROM
+        ldi   R17,0x06                    ; запись EEPROM
 L24:
         rcall recv_hex
         out   EEDR,R16
-        rcall EepromTalk                  ;запись
+        rcall EepromTalk                  ; запись
         eor   R20,R16
-        cpi   R27,high(EEPROMEND+1)       ;512? 1024? 2048?
+        cpi   R27,high(EEPROMEND+1)       ; 512? 1024? 2048?
         BRNE  L24
 
         rcall sendAnswer
@@ -281,25 +281,25 @@ w00:
 
 Return:
 #ifdef _PLATFORM_M64_
-        lds   R16,SPMCR                   ;<--memory mapped
+        lds   R16,SPMCR                   ; <--memory mapped
 #else
         in    R16,SPMCR
-        nop                               ;to get the same code size
+        nop                               ; to get the same code size
 #endif
         sbrs  R16,RWWSB
-      	rjmp  do_strt_app	          ; Start the application program 
+        rjmp  do_strt_app                 ; Start the application program 
         ; re-enable the RWW section
         ldi   R17, (1<<RWWSRE) | (1<<SPMEN)
         rcall Do_spm
-      	rjmp  Return
+        rjmp  Return
 
         ;Enable watchdog timer and wait for system reset. Note: we rely that safety level 
         ;is 0 (actual only for mega 64)
 do_strt_app:
-        ldi   R16, (1 << WDE)             ;16 ms
-        out   WDTCR, R16        
+        ldi   R16, (1 << WDE)             ; 16 ms
+        out   WDTCR, R16
 wait_rst:
-        rjmp  wait_rst                    
+        rjmp  wait_rst
 
         ;------------------------------------------------------------------------------
 CMD500:
@@ -309,14 +309,14 @@ CMD500:
 
         rcall sendAnswer
 
-	ldi ZL,low(2*info)                ; стартовый адрес сообщения
-	ldi ZH,high(2*info)
+        ldi ZL,low(2*info)                ; стартовый адрес сообщения
+        ldi ZH,high(2*info)
 isloop:
-	lpm R16,Z+		          ; string pointer (the Z-register)
-	tst R16
-	breq end_loop	                  ; exit the character output loop if character was '\0'
-	rcall uartSend 		          ; send the read character via the UART
-	rjmp isloop                       ; go to start of loop for next character
+        lpm R16,Z+                        ; string pointer (the Z-register)
+        tst R16
+        breq end_loop                     ; exit the character output loop if character was '\0'
+        rcall uartSend                    ; send the read character via the UART
+        rjmp isloop                       ; go to start of loop for next character
 end_loop:
         rjmp  wait_cmd
         ;------------------------------------------------------------------------------
@@ -328,7 +328,6 @@ CMD_NA:
         rjmp  wait_cmd
 
        ;-------------------------------------------------------------------------------
-
 
 
 ;посылает <
@@ -357,17 +356,17 @@ uartSend:
 ;в этих регистрах шестнадцатеричное число представлено двумя ASCII символами
 btoh:
         push  R18
-        mov   R17,R16                     ;переводим старшую тетраду числа в HEX
-        SWAP  R17                         ;делаем старшую тетраду младшей
+        mov   R17,R16                     ; переводим старшую тетраду числа в HEX
+        SWAP  R17                         ; делаем старшую тетраду младшей
         andi  R17,0x0F
         cpi   R17,0x0A
-        BRLO  _b00                        ;если цифра то прибавляем 0x30, если буква то 0x37
+        BRLO  _b00                        ; если цифра то прибавляем 0x30, если буква то 0x37
         ldi   R18,7
         add   R17,R18
 _b00:
         ldi   R18,0x30
         add   R17,R18
-        andi  R16,0x0F                    ;переводим младшую тетраду числа в HEX
+        andi  R16,0x0F                    ; переводим младшую тетраду числа в HEX
         CPI   R16,0x0A
         BRLO  _b01
         ldi   R18,7
@@ -385,15 +384,15 @@ htob:
         push   R17
         cpi    R16,0x3A
         BRLO   _h00
-        SUBI   R16,7                      ;если буква, то вычитаем еще
+        SUBI   R16,7                      ; если буква, то вычитаем еще
 _h00:   ;цифра
         subi   R16,0x30
         cpi    R17,0x3A
         BRLO   _h01
-        SUBI   R17,7                      ;если буква, то вычитаем еще
+        SUBI   R17,7                      ; если буква, то вычитаем еще
 _h01:   ;цифра
         subi   R17,0x30
-        SWAP   R17                        ;в R17 старшая тетрада - на место ее...
+        SWAP   R17                        ; в R17 старшая тетрада - на место ее...
         OR     R16,R17
         pop    R17
         ret
@@ -404,12 +403,12 @@ _h01:   ;цифра
 send_hex:
         push  R16
         push  R17
-        rcall btoh                        ;R17:R16 содержат символы HEX-числа
-        push  R16                         ;сохраняем R16 так как сначала необходимо передать старший байт
+        rcall btoh                        ; R17:R16 содержат символы HEX-числа
+        push  R16                         ; сохраняем R16 так как сначала необходимо передать старший байт
         mov   R16,R17
         rcall uartSend
         pop   R16
-        rcall uartSend                    ;передаем младший байт числа
+        rcall uartSend                    ; передаем младший байт числа
         pop   R17
         pop   R16
         ret 
@@ -421,17 +420,17 @@ recv_hex:
         push  R17
         rcall uartGet
         CPI   R16,'!'
-        breq  new_cmd                     ;получен символ новой команды
+        breq  new_cmd                     ; получен символ новой команды
         mov   R17,R16
         rcall uartGet
         CPI   R16,'!'
-        breq  new_cmd                     ;получен символ новой команды
+        breq  new_cmd                     ; получен символ новой команды
         call  htob
         pop   R17
         ret
 new_cmd:
         pop   R17
-        pop   R16                         ;удаляем из стека содержимое счетчика команд
+        pop   R16                         ; удаляем из стека содержимое счетчика команд
         pop   R16
         rjmp  wait_cc
 
@@ -468,10 +467,10 @@ Page_num:
 Do_spm:
         ;проверка зввершения предидущей SPM операции и ожидание если не завершена
 #ifdef _PLATFORM_M64_
-        lds   R16,SPMCR                   ;<--memory mapped
+        lds   R16,SPMCR                   ; <--memory mapped
 #else
         in    R16,SPMCR
-        nop                               ;to get the same code size
+        nop                               ; to get the same code size
 #endif
         sbrc   R16, SPMEN
         rjmp   Do_spm
@@ -481,10 +480,10 @@ Wait_ee:
         rjmp   Wait_ee
         ;все нормально - реализуем SPM операцию
 #ifdef _PLATFORM_M64_
-        sts   SPMCR, R17                  ;<--memory mapped
+        sts   SPMCR, R17                  ; <--memory mapped
 #else
         out   SPMCR, R17
-        nop                               ;to get the same code size
+        nop                               ; to get the same code size
 #endif
         spm
         ret
@@ -493,17 +492,17 @@ Wait_ee:
 ;Читает или записывает EEPROM
 ;if R17 == 6 then Write, if R17 == 1 then Read
 EepromTalk:
-	out EEARL,R26 		          ; EEARL = address low
-	out EEARH,R27 		          ; EEARH = address high
-	adiw R27:R26,1 		          ; address++
-	sbrc R17,1 		          ; skip if R17 == 1 (read Eeprom)
-	sbi EECR,EEMWE 		          ; EEMWE = 1 (write Eeprom)
-	out EECR,R17 		          ; EECR = R17 (6 write, 1 read)
+        out EEARL,R26                     ; EEARL = address low
+        out EEARH,R27                     ; EEARH = address high
+        adiw R27:R26,1                    ; address++
+        sbrc R17,1                        ; skip if R17 == 1 (read Eeprom)
+        sbi EECR,EEMWE                    ; EEMWE = 1 (write Eeprom)
+        out EECR,R17                      ; EECR = R17 (6 write, 1 read)
 L90:
-	sbic EECR,EEWE 		          ; wait until EEWE == 0
-	rjmp L90
-	in R16,EEDR 		          ; R16 = EEDR
-	ret
+        sbic EECR,EEWE                    ; wait until EEWE == 0
+        rjmp L90
+        in R16,EEDR                       ; R16 = EEDR
+        ret
 
-; размер должен быть 24 |----------------------|       
+; размер должен быть 24 |----------------------|
 info:             .db  "Boot loader v1.2.[08.10]",0,0 ;[mm.yy]
