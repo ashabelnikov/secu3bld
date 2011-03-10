@@ -229,7 +229,7 @@ CMD200:
         ldi   R17,0x01                    ; чтение EEPROM
 L23:
         rcall EepromTalk
-        eor   R20,R16              
+        eor   R20,R16
         rcall send_hex
         cpi   R27,high(EEPROMEND+1)       ; 512? 1024? 2048?
         BRNE  L23
