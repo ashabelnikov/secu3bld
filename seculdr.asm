@@ -107,7 +107,16 @@
 
 .equ    LDR_P_INIT = 3                    ; линия порта C для старта загрузчика при старте
 .equ    PAGESIZEB  = PAGESIZE*2           ; PAGESIZEB is page size in BYTES, not words
-.equ    UBR        = 0x67                 ; скорость UART-a - 9600 бод
+
+;Here are some values for UBR for 16.000 mHz crystal
+;       Speed        Value
+;       9600         0x67
+;       14400        0x44
+;       19200        0x33
+;       28800        0x22
+;       38400        0x19
+;       57600        0x10
+.equ    UBR        = 0x67                 ; UART speed 9600 baud (Скорость UART-a)
 
         .org  SECONDBOOTSTART             ; начало кода загрузчика
         cli                               ; прерывания не используются
