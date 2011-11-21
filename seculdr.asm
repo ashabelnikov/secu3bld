@@ -100,6 +100,7 @@
 .equ    UDRE  = UDRE0
 .equ    UCSRA = UCSR0A
 .equ    UCSRB = UCSR0B
+.equ    U2X   = U2X0
 
 #else
  #error "Wrong platform identifier!"
@@ -109,14 +110,16 @@
 .equ    PAGESIZEB  = PAGESIZE*2           ; PAGESIZEB is page size in BYTES, not words
 
 ;Here are some values for UBR for 16.000 mHz crystal
-;       Speed        Value
-;       9600         0x67
-;       14400        0x44
-;       19200        0x33
-;       28800        0x22
-;       38400        0x19
-;       57600        0x10
-.equ    UBR        = 0x67                 ; UART speed 9600 baud (Скорость UART-a)
+;
+;       Speed    Value(U2X=0)  Value(U2X=1)
+;       9600        0x67          0xCF
+;       14400       0x44          0x8A
+;       19200       0x33          0x67
+;       28800       0x22          0x44
+;       38400       0x19          0x33
+;       57600       0x10          0x22
+
+.equ    UBR        = 0xCF                 ; UART speed 9600 baud (Скорость UART-a)
 
         .org  SECONDBOOTSTART             ; начало кода загрузчика
         cli                               ; прерывания не используются
@@ -138,6 +141,8 @@ START_FROM_APP:
         out   UBRRL,R24
         ldi   R24,(1<<RXEN)|(1<<TXEN)     ; Enable receiver & transmitter, 8-bit mode
         out   UCSRB,R24
+        ldi   R24, (1<<U2X)               ; Use U2X to reduce baud error
+        out   UCSRA, R24
 
         ;основной цикл программы - ожидание команд
 
