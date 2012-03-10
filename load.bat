@@ -42,7 +42,7 @@ if not defined FOUND_PGM (
  echo ERROR: Can not find file "%PROGRAMMER%"
  goto error
 )
-%PROGRAMMER% avreal32.exe -as -p%LPT% %MCU% -o16MHZ -e -w seculdr.hex
+%PROGRAMMER% avreal32.exe -as -p1 %MCU% -o16MHZ -e -w seculdr.hex
 IF ERRORLEVEL 1 GOTO error
 
 echo ---------------------------------------------
