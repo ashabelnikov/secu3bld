@@ -3,7 +3,6 @@ rem SECU-3 project
 rem Batch file for creating of C-array from boot loader's body.
 rem Created by Alexey A. Shabelnikov, Kiev 28 August 2010. 
 
-set LOGFILE=make_c_array.log
 set ARRAYMAKER=bintoarray.exe
 set HEXTOBIN=hextobin.exe
 set USAGE=Supported options: M16,M32,M64
@@ -40,32 +39,33 @@ echo %USAGE%
 exit 1
 
 :dowork
-echo See %LOGFILE% for detailed information.
-IF EXIST %LOGFILE% del %LOGFILE%
+echo EXECUTING BATCH...
+echo ---------------------------------------------
 
-echo EXECUTING BATCH... >> %LOGFILE%
-echo --------------------------------------------- >> %LOGFILE%
 
-IF NOT EXIST %HEXTOBIN% (
- echo ERROR: Can not find file "%HEXTOBIN%" >> %LOGFILE%
+for %%X in (%HEXTOBIN%) do (set FOUND_H2B=%%~$PATH:X)
+if not defined FOUND_H2B (
+ echo ERROR: Can not find file "%HEXTOBIN%"
  goto error
 )
-%HEXTOBIN% seculdr.hex seculdr.bin  >> %LOGFILE%
+%HEXTOBIN% seculdr.hex seculdr.bin
 IF ERRORLEVEL 1 GOTO error
 
-IF NOT EXIST %ARRAYMAKER% (
- echo ERROR: Can not find file "%ARRAYMAKER%" >> %LOGFILE%
+
+for %%X in (%ARRAYMAKER%) do (set FOUND_AM=%%~$PATH:X)
+if not defined FOUND_AM (
+ echo ERROR: Can not find file "%ARRAYMAKER%"
  goto error
 )
-%ARRAYMAKER% seculdr.bin seculdr.c %BL_ADDR% %BL_SIZE% >> %LOGFILE%
+%ARRAYMAKER% seculdr.bin seculdr.c %BL_ADDR% %BL_SIZE%
 IF ERRORLEVEL 1 GOTO error
 
-echo/ >> %LOGFILE%
-echo --------------------------------------------- >> %LOGFILE%
-echo ALL OPERATIONS WERE COMPLETED SUCCESSFULLY! >> %LOGFILE%
+echo/
+echo ---------------------------------------------
+echo ALL OPERATIONS WERE COMPLETED SUCCESSFULLY!
 exit 0
 
 :error
-echo --------------------------------------------- >> %LOGFILE%
-echo WARNING! THERE ARE SOME ERRORS IN EXECUTING BATCH. >> %LOGFILE%
+echo ---------------------------------------------
+echo WARNING! THERE ARE SOME ERRORS IN EXECUTING BATCH.
 exit 1

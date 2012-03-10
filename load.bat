@@ -1,9 +1,8 @@
 @echo off
 rem SECU-3 project
-rem Batch file for create C-array with boot loader body.
+rem Batch file for loading of bootloader into the microcontroller.
 rem Created by Alexey A. Shabelnikov, Kiev 28 August 2010. 
 
-set LOGFILE=load.log
 set PROGRAMMER=avreal32.exe
 set USAGE=Supported options: M16,M32,M64
 set MCU=Undefined
@@ -35,25 +34,22 @@ echo %USAGE%
 exit 1
 
 :dowork
-echo See %LOGFILE% for detailed information.
-IF EXIST %LOGFILE% del %LOGFILE%
+echo EXECUTING BATCH...
+echo ---------------------------------------------
 
-echo EXECUTING BATCH... >> %LOGFILE%
-echo --------------------------------------------- >> %LOGFILE%
-
-IF NOT EXIST %PROGRAMMER% (
- echo ERROR: Can not find file "%PROGRAMMER%" >> %LOGFILE%
+for %%X in (%PROGRAMMER%) do (set FOUND_PGM=%%~$PATH:X)
+if not defined FOUND_PGM (
+ echo ERROR: Can not find file "%PROGRAMMER%"
  goto error
 )
-%PROGRAMMER% avreal32.exe -as -p1 %MCU% -o16MHZ -e -w seculdr.hex >> %LOGFILE%
+%PROGRAMMER% avreal32.exe -as -p%LPT% %MCU% -o16MHZ -e -w seculdr.hex
 IF ERRORLEVEL 1 GOTO error
 
-echo/ >> %LOGFILE%
-echo --------------------------------------------- >> %LOGFILE%
-echo ALL OPERATIONS WERE COMPLETED SUCCESSFULLY! >> %LOGFILE%
+echo ---------------------------------------------
+echo ALL OPERATIONS WERE COMPLETED SUCCESSFULLY!
 exit 0
 
 :error
-echo --------------------------------------------- >> %LOGFILE%
-echo WARNING! THERE ARE SOME ERRORS IN EXECUTING BATCH. >> %LOGFILE%
+echo ---------------------------------------------
+echo WARNING! THERE ARE SOME ERRORS IN EXECUTING BATCH.
 exit 1

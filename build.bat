@@ -1,9 +1,8 @@
 @echo off
-rem Batch file for build boot loader of SECU-3 project firmware
+rem Batch file for building of boot loader of SECU-3 project firmware
 rem Created by Alexey A. Shabelnikov, Kiev 28 August 2010. 
 rem Note: It requires avrasm2 AVR assembler from Atmel
 
-set LOGFILE=build.log
 set ASSEMBLER=avrasm2.exe
 set HEXTOBIN=hextobin.exe
 set USAGE=Supported options: M16,M32,M64
@@ -36,31 +35,30 @@ echo %USAGE%
 exit 1
 
 :assemble
-echo See %LOGFILE% for detailed information.
-IF EXIST %LOGFILE% del %LOGFILE%
+echo EXECUTING BATCH...
+echo ---------------------------------------------
 
-echo EXECUTING BATCH... >> %LOGFILE%
-echo --------------------------------------------- >> %LOGFILE%
-
-IF NOT EXIST %ASSEMBLER% (
- echo ERROR: Can not find file "%ASSEMBLER%" >> %LOGFILE%
+for %%X in (%ASSEMBLER%) do (set FOUND_ASM=%%~$PATH:X)
+if not defined FOUND_ASM (
+ echo ERROR: Can not find file "%ASSEMBLER%"
  goto error
 )
-%ASSEMBLER% -fI -D %PLATFORM% seculdr.asm -l seculdr.lst >> %LOGFILE%
+%ASSEMBLER% -fI -D %PLATFORM% seculdr.asm -l seculdr.lst
 IF ERRORLEVEL 1 GOTO error
 
-IF NOT EXIST %HEXTOBIN% (
- echo ERROR: Can not find file "%HEXTOBIN%" >> %LOGFILE%
+for %%X in (%HEXTOBIN%) do (set FOUND_H2B=%%~$PATH:X)
+if not defined FOUND_H2B (
+ echo ERROR: Can not find file "%HEXTOBIN%"
  goto error
 )
-%HEXTOBIN% seculdr.hex seculdr.bin >> %LOGFILE%
+%HEXTOBIN% seculdr.hex seculdr.bin
 IF ERRORLEVEL 1 GOTO error
 
-echo --------------------------------------------- >> %LOGFILE%
-echo ALL OPERATIONS WERE COMPLETED SUCCESSFULLY! >> %LOGFILE%
+echo ---------------------------------------------
+echo ALL OPERATIONS WERE COMPLETED SUCCESSFULLY!
 exit 0
 
 :error
-echo --------------------------------------------- >> %LOGFILE%
-echo WARNING! THERE ARE SOME ERRORS IN EXECUTING BATCH. >> %LOGFILE%
+echo ---------------------------------------------
+echo WARNING! THERE ARE SOME ERRORS IN EXECUTING BATCH.
 exit 1
