@@ -353,6 +353,7 @@ sendAnswer:
 
 ;читает один байт из UART и возвращает его в R16
 uartGet:
+        WDR
         sbis  UCSRA,RXC                   ; wait for incoming data (until RXC==1)
         rjmp  uartGet
         in    R16,UDR                     ; return received data in R16
@@ -360,6 +361,7 @@ uartGet:
 
 ;записывает один байт из регистра R16 в UART
 uartSend:
+        WDR
         sbis  UCSRA,UDRE                  ; wait for empty transmit buffer (until UDRE==1)
         rjmp  uartSend
         out   UDR,R16                     ; UDR = R16, start transmission
@@ -486,10 +488,12 @@ Do_spm:
         in    R16,SPMCR
         nop                               ; to get the same code size
 #endif
+        WDR
         sbrc   R16, SPMEN
         rjmp   Do_spm
         ;проверяем доступ к EEPROM и если он открыт, то ждем завершения операции
 Wait_ee:
+        WDR
         sbic   EECR, EEWE
         rjmp   Wait_ee
         ;все нормально - реализуем SPM операцию
@@ -513,6 +517,7 @@ EepromTalk:
         sbi EECR,EEMWE                    ; EEMWE = 1 (write Eeprom)
         out EECR,R17                      ; EECR = R17 (6 write, 1 read)
 L90:
+        WDR
         sbic EECR,EEWE                    ; wait until EEWE == 0
         rjmp L90
         in R16,EEDR                       ; R16 = EEDR
