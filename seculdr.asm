@@ -20,13 +20,14 @@
 
 
 ; Для работы загрузчика необходимо:
-; размер загрузчика зависит от выбранной платформы (mega16, mega32, mega64).
-; BOOTRST = 0, BOOTSZ1 = 1, BOOTSZ0 = 0, JTAGEN = 1, WDTON = 1(mega64), M103C = 0(mega64), кварц - 16.000 мГц 
+; размер загрузчика зависит от выбранной платформы (mega16, mega32, mega64, mega644).
+; BOOTRST = 0, BOOTSZ1 = 1, BOOTSZ0 = 0, JTAGEN = 1, WDTON = 1(mega64, mega644), M103C = 0(mega64).
 ; 1 - бит не запрограммирован
+; Частота кварцевого резонатора: 16.000 мГц (mega16, mega32, mega64), 20.000 мГц (mega644)
 
-; - При запуске микроконтроллера управление передается загрузчику. Проверяется состояние 
-;   линии LDR_P_INIT порта C. Если на  ней низкий уровень, то производится продолжение работы 
-;   загрузчика. Иначе производится запуск приложения (Application section).  
+; - При запуске микроконтроллера управление передается загрузчику. Проверяется состояние
+;   линии LDR_P_INIT порта C. Если на  ней низкий уровень, то производится продолжение работы
+;   загрузчика. Иначе производится запуск приложения (Application section).
 ; - Загрузчик может быть активирован командой перехода из основной программы
 ; Адрес перехода - START_FROM_APP
 
@@ -85,22 +86,36 @@
 #ifdef _PLATFORM_M16_
 .INCLUDE "m16def.inc"
 #message "ATMega16 platform used"
+#define  PLATFORM_CODE "16  "
 #elif _PLATFORM_M32_
 .INCLUDE "m32def.inc"
 #message "ATMega32 platform used"
-#elif _PLATFORM_M64_
+#define PLATFORM_CODE "32  "
+#elif defined(_PLATFORM_M64_) || defined(_PLATFORM_M644_)
+#ifdef _PLATFORM_M64_
 .INCLUDE "m64def.inc"
 #message "ATMega64 platform used"
- ;define UART registers, because mega 64 has two UARTS
-.equ    UBRRL = UBRR0L
-.equ    RXEN  = RXEN0
-.equ    TXEN  = TXEN0
-.equ    UDR   = UDR0
-.equ    RXC   = RXC0
-.equ    UDRE  = UDRE0
-.equ    UCSRA = UCSR0A
-.equ    UCSRB = UCSR0B
-.equ    U2X   = U2X0
+#define PLATFORM_CODE "64  "
+#else
+.INCLUDE "m644def.inc"
+#message "ATMega644 platform used"
+#define PLATFORM_CODE "644 "
+.equ    SPMCR  = SPMCSR
+.equ    WDTCR  = WDTCSR
+.equ    EEWE   = EEPE
+.equ    EEMWE  = EEMPE
+#endif
+ ;define UART registers, because mega64 has two UARTS and mega644 has different registers naming
+.equ    UBRRL  = UBRR0L
+.equ    UBRRH  = UBRR0H
+.equ    RXEN   = RXEN0
+.equ    TXEN   = TXEN0
+.equ    UDR    = UDR0
+.equ    RXC    = RXC0
+.equ    UDRE   = UDRE0
+.equ    UCSRA  = UCSR0A
+.equ    UCSRB  = UCSR0B
+.equ    U2X    = U2X0
 
 #else
  #error "Wrong platform identifier!"
@@ -120,8 +135,23 @@
 ;       57600       0x10          0x22
 ;       115200      0x08          0x10
 ;       250000      0x03          0x07
+;Here are some values for UBR for 20.000 mHz crystal
+;
+;       Speed    Value(U2X=0)  Value(U2X=1)
+;       9600        0x81          0x103
+;       14400       0x56          0xAD
+;       19200       0x40          0x81
+;       28800       0x2A          0x56
+;       38400       0x20          0x40
+;       57600       0x15          0x2A
+;       115200      0x0A          0x15
+;       250000      0x04          0x09
 
+#ifdef _PLATFORM_M644_
+.equ    UBR        = 0x103                ; UART speed 9600 baud (Скорость UART-a)
+#else
 .equ    UBR        = 0xCF                 ; UART speed 9600 baud (Скорость UART-a)
+#endif
 
         .org  SECONDBOOTSTART             ; начало кода загрузчика
         cli                               ; прерывания не используются
@@ -139,12 +169,32 @@ START_FROM_APP:
         out   SPH,R25
 
         ;инициализируем UART
-        ldi   R24,UBR                     ; set Baud rate
-        out   UBRRL,R24
+
+        ldi   R24,low(UBR)                ; set Baud rate (low byte)
+#ifdef _PLATFORM_M644_
+        sts  UBRRL,R24                    ; <--memory mapped
+#else
+        out  UBRRL,R24
+#endif
+        ldi   R24,high(UBR)               ; set Baud rate (high byte)
+#if defined(_PLATFORM_M64_) || defined(_PLATFORM_M644_)
+        sts   UBRRH,R24                   ; <--memory mapped
+#else
+        out   UBRRH,R24
+        nop
+#endif
         ldi   R24,(1<<RXEN)|(1<<TXEN)     ; Enable receiver & transmitter, 8-bit mode
+#ifdef _PLATFORM_M644_
+        sts   UCSRB,R24                   ; <--memory mapped
+#else
         out   UCSRB,R24
+#endif
         ldi   R24, (1<<U2X)               ; Use U2X to reduce baud error
+#ifdef _PLATFORM_M644_
+        sts   UCSRA, R24                  ; <--memory mapped
+#else
         out   UCSRA, R24
+#endif
 
         ;основной цикл программы - ожидание команд
 
@@ -292,7 +342,12 @@ CMD400:
 
         ;ожидание завершения передачи, а затем выход
 w00:
+#ifdef _PLATFORM_M644_
+        lds   R16,UCSRA                   ; <--memory mapped
+        sbrs  R16,UDRE
+#else
         sbis  UCSRA,UDRE
+#endif
         rjmp  w00
 
 Return:
@@ -313,7 +368,11 @@ Return:
         ;is 0 (actual only for mega 64)
 do_strt_app:
         ldi   R16, (1 << WDE)             ; 16 ms
+#ifdef _PLATFORM_M644_
+        sts   WDTCR, R16                  ; <--memory mapped
+#else
         out   WDTCR, R16
+#endif
 wait_rst:
         rjmp  wait_rst
 
@@ -356,17 +415,35 @@ sendAnswer:
 ;читает один байт из UART и возвращает его в R16
 uartGet:
         WDR
+#ifdef _PLATFORM_M644_
+        lds   R16,UCSRA                   ; <--memory mapped
+        sbrs  R16,UDRE
+#else
         sbis  UCSRA,RXC                   ; wait for incoming data (until RXC==1)
+#endif
         rjmp  uartGet
+#ifdef _PLATFORM_M644_
+        lds   R16,UDR                     ; <--memory mapped
+#else
         in    R16,UDR                     ; return received data in R16
+#endif
         ret
 
 ;записывает один байт из регистра R16 в UART
 uartSend:
         WDR
+#ifdef _PLATFORM_M644_
+        lds   R16,UCSRA                   ; <--memory mapped
+        sbrs  R16,UDRE
+#else
         sbis  UCSRA,UDRE                  ; wait for empty transmit buffer (until UDRE==1)
+#endif
         rjmp  uartSend
+#ifdef _PLATFORM_M644_
+        sts   UDR,R16                     ; <--memory mapped
+#else
         out   UDR,R16                     ; UDR = R16, start transmission
+#endif
         ret
 
 
@@ -458,15 +535,16 @@ new_cmd:
 ; регистр Z
 ; 15 14 13 12 11 10 9  8  7  6  5  4  3  2  1  0
 ; x  x  *  *  *  *  *  *  *  0  0  0  0  0  0  0   mega16
-; x  *  *  *  *  *  *  *  *  0  0  0  0  0  0  0   mega32
-; *  *  *  *  *  *  *  *  0  0  0  0  0  0  0  0   mega64
+; x  *  *  *  *  *  *  *  *  0  0  0  0  0  0  0   mega32    (64 words, 256 pages)
+; *  *  *  *  *  *  *  *  0  0  0  0  0  0  0  0   mega64    (128 words, 256 pages)
+; *  *  *  *  *  *  *  *  0  0  0  0  0  0  0  0   mega644   (128 words, 256 pages)
 ;
 ; x - не имеет значения
 ; * - номер страницы
 ; 0 - равны 0
 Page_num:
         mov   ZH,R16
-#ifdef _PLATFORM_M64_
+#if defined(_PLATFORM_M64_) || defined(_PLATFORM_M644_)
         nop
         clr   ZL
         nop
@@ -483,7 +561,7 @@ Page_num:
 ; Осуществдение указанной операции программирования
 ; R17 - текущая операция
 Do_spm:
-        ;проверка зввершения предидущей SPM операции и ожидание если не завершена
+        ;проверка зввершения предыдущей SPM операции и ожидание если не завершена
 #ifdef _PLATFORM_M64_
         lds   R16,SPMCR                   ; <--memory mapped
 #else
@@ -526,4 +604,8 @@ L90:
         ret
 
 ; размер должен быть 24 |----------------------|
-info:             .db  "Boot loader v1.4.[04.12]",0,0 ;[mm.yy]
+info:             .db  "Boot loader v1.5.[08.13]",0,0 ;[mm.yy]
+
+        .org  FLASHEND-1
+; MCU type information string, size must be 4 bytes
+                  .db  PLATFORM_CODE
