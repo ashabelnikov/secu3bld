@@ -87,7 +87,7 @@
 .INCLUDE "m16def.inc"
 #message "ATMega16 platform used"
 #define  PLATFORM_CODE "16  "
-#elif _PLATFORM_M32_
+#elif defined(_PLATFORM_M32_)
 .INCLUDE "m32def.inc"
 #message "ATMega32 platform used"
 #define PLATFORM_CODE "32  "
@@ -159,7 +159,8 @@
         clr   R0
         out   DDRC,R0                     ; делаем все линии порта C входами
         sbic  PINC,LDR_P_INIT             ; если 0 то bootloader работает дальше
-        rjmp  FLASHEND+1                  ; иначе старт основной программы
+        ; [andreika]: fix 'Relative branch out of reach' compile error in some cases
+        rjmp  StartProgram                ; иначе старт основной программы
 START_FROM_APP:
         cli                               ; если мы пришли из программы то прерывания надо обязательно запретить
         ;инициализируем указатель стека
@@ -417,7 +418,7 @@ uartGet:
         WDR
 #ifdef _PLATFORM_M644_
         lds   R16,UCSRA                   ; <--memory mapped
-        sbrs  R16,UDRE
+        sbrs  R16,RXC
 #else
         sbis  UCSRA,RXC                   ; wait for incoming data (until RXC==1)
 #endif
@@ -433,8 +434,8 @@ uartGet:
 uartSend:
         WDR
 #ifdef _PLATFORM_M644_
-        lds   R16,UCSRA                   ; <--memory mapped
-        sbrs  R16,UDRE
+        lds   R17,UCSRA                   ; <--memory mapped
+        sbrs  R17,UDRE
 #else
         sbis  UCSRA,UDRE                  ; wait for empty transmit buffer (until UDRE==1)
 #endif
@@ -604,7 +605,11 @@ L90:
         ret
 
 ; размер должен быть 24 |----------------------|
-info:             .db  "Boot loader v1.5.[08.13]",0,0 ;[mm.yy]
+info:             .db  "Boot loader v1.6.[11.13]",0,0 ;[mm.yy]
+
+; [andreika]: fix 'Relative branch out of reach' compile error in some cases
+StartProgram:
+        jmp FLASHEND+1
 
         .org  FLASHEND-1
 ; MCU type information string, size must be 4 bytes
