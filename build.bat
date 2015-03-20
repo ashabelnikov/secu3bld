@@ -1,4 +1,7 @@
 @echo off
+rem  SECU-3  - An open source, free engine control unit
+rem  Copyright (C) 2007 Alexey A. Shabelnikov. Ukraine, Kiev
+rem 
 rem Batch file for building of boot loader of SECU-3 project firmware
 rem Created by Alexey A. Shabelnikov, Kiev 28 August 2010. 
 rem Note: It requires avrasm2 AVR assembler from Atmel

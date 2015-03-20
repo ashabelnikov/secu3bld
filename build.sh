@@ -1,4 +1,7 @@
 #!/bin/sh
+#  SECU-3  - An open source, free engine control unit
+#  Copyright (C) 2007 Alexey A. Shabelnikov. Ukraine, Kiev
+#
 #Batch file for building of boot loader of SECU-3 project firmware under Linux OS
 #Created by Alexey A. Shabelnikov, Kiev 29 August 2013.
 #Note: It requires avrasm2 AVR assembler from Atmel and wine

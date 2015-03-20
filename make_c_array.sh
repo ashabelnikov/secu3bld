@@ -1,6 +1,7 @@
 #!/bin/sh
-
-# SECU-3 project
+#  SECU-3  - An open source, free engine control unit
+#  Copyright (C) 2007 Alexey A. Shabelnikov. Ukraine, Kiev
+#
 # Script for creating of C-array from boot loader's body under OS Linux.
 # Created by Alexey A. Shabelnikov, Kiev 03 September 2013
 

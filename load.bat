@@ -1,5 +1,7 @@
 @echo off
-rem SECU-3 project
+rem  SECU-3  - An open source, free engine control unit
+rem  Copyright (C) 2007 Alexey A. Shabelnikov. Ukraine, Kiev
+rem 
 rem Batch file for loading of bootloader into the microcontroller.
 rem Created by Alexey A. Shabelnikov, Kiev 28 August 2010. 
 
