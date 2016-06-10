@@ -158,8 +158,12 @@
         .org  SECONDBOOTSTART             ; начало кода загрузчика
         cli                               ; прерывания не используются
 
+        ldi   R16,0x0C                    ; connect internal pull-up resistor
+        out   PORTC,R16
         clr   R0
         out   DDRC,R0                     ; делаем все линии порта C входами
+        nop
+        nop
         sbic  PINC,LDR_P_INIT             ; если 0 то bootloader работает дальше
         ; [andreika]: fix 'Relative branch out of reach' compile error in some cases
         rjmp  StartProgram                ; иначе старт основной программы
@@ -607,7 +611,7 @@ L90:
         ret
 
 ; размер должен быть 24 |----------------------|
-info:             .db  "Boot loader v1.6.[11.13]",0,0 ;[mm.yy]
+info:             .db  "SECU-3 BLDR v1.7.[06.16]",0,0 ;[mm.yy]
 
 ; [andreika]: fix 'Relative branch out of reach' compile error in some cases
 StartProgram:
