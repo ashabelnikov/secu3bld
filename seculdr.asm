@@ -162,8 +162,12 @@
         out   PORTC,R16
         clr   R0
         out   DDRC,R0                     ; делаем все линии порта C входами
-        nop
-        nop
+
+        ldi   R16,0x40                    ; approx. 6.4uS at 20MHz
+pu_rise:
+        dec  R16
+        brne pu_rise                      ; wait while pull-up voltage is rising
+
         sbic  PINC,LDR_P_INIT             ; если 0 то bootloader работает дальше
         ; [andreika]: fix 'Relative branch out of reach' compile error in some cases
         rjmp  StartProgram                ; иначе старт основной программы
@@ -611,7 +615,7 @@ L90:
         ret
 
 ; размер должен быть 24 |----------------------|
-info:             .db  "SECU-3 BLDR v1.7.[06.16]",0,0 ;[mm.yy]
+info:             .db  "SECU-3 BLDR v1.8.[08.16]",0,0 ;[mm.yy]
 
 ; [andreika]: fix 'Relative branch out of reach' compile error in some cases
 StartProgram:
