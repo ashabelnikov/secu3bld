@@ -222,14 +222,14 @@ wait_cc:
         rcall recv_hex                    ; R16 <--- NN
         rcall page_num                    ; Z <-- номер страницы
 
-        ;стираем страницу
+        ;erase page
         ldi   R17, (1<<PGERS) | (1<<SPMEN)
         rcall Do_spm
         ;разрешить адресацию области RWW
         ldi   R17, (1<<RWWSRE) | (1<<SPMEN)
         rcall Do_spm
 
-        clr   R20                         ; очистили байт контрольной суммы
+        clr   R20                         ; clear byte of check sum
         ;Записываем данные из UART-a в буфер страницы
         ldi   R24, low(PAGESIZEB)         ; ининиализировали счетчик (кол-во байт в странице)
 
@@ -257,7 +257,7 @@ Wr_loop:  ;64(mega16, mega32), 128(mega64) итерации - за одну итерацию два байта
 
         rcall sendAnswer
 
-        ;передаем байт контрольной суммы
+        ;transmit byte of check sum
         mov   R16,R20
         rcall send_hex
 
@@ -277,7 +277,7 @@ CMD100:
         ldi   R17, (1<<RWWSRE) | (1<<SPMEN)
         rcall Do_spm
 
-        clr   R20                         ; очистили байт контрольной суммы
+        clr   R20                         ; clear byte of check sum
         ; Чтение страницы в UART
         ldi   R24, low(PAGESIZEB)         ; ининиализировали счетчик
 Rdloop:  ;64(mega16, mega32), 128(mega64) итерации
@@ -287,7 +287,7 @@ Rdloop:  ;64(mega16, mega32), 128(mega64) итерации
         subi  R24, 1
         brne  Rdloop
 
-        ;передаем байт контрольной суммы
+        ;transmit byte of check sum
         mov   R16,R20
         rcall send_hex
 
@@ -300,18 +300,18 @@ CMD200:
 
         rcall sendAnswer
 
-        clr   R20                         ; очистили байт контрольной суммы
+        clr   R20                         ; clear byte of check sum
         clr   R26
         clr   R27
         ldi   R17,0x01                    ; чтение EEPROM
 L23:
-        rcall EepromTalk
+        rcall EepromRdWr
         eor   R20,R16
         rcall send_hex
         cpi   R27,high(EEPROMEND+1)       ; 512? 1024? 2048?
         BRNE  L23
 
-        ;передаем байт контрольной суммы
+        ;transmit byte of check sum
         mov   R16,R20
         rcall send_hex
 
@@ -329,14 +329,14 @@ CMD300:
 L24:
         rcall recv_hex
         out   EEDR,R16
-        rcall EepromTalk                  ; запись
+        rcall EepromRdWr                  ; write
         eor   R20,R16
         cpi   R27,high(EEPROMEND+1)       ; 512? 1024? 2048?
         BRNE  L24
 
         rcall sendAnswer
 
-        ;передаем байт контрольной суммы
+        ;transmit byte of check sum
         mov   R16,R20
         rcall send_hex
 
@@ -375,7 +375,7 @@ Return:
         rcall Do_spm
         rjmp  Return
 
-        ;Enable watchdog timer and wait for system reset. Note: we rely that safety level 
+        ;Enable watchdog timer and wait for system reset. Note: we rely that safety level
         ;is 0 (actual only for mega 64)
 do_strt_app:
         ldi   R16, (1 << WDE)             ; 16 ms
@@ -598,9 +598,9 @@ Wait_ee:
         ret
 
 
-;Читает или записывает EEPROM
+;Reads or writes from/into EEPROM
 ;if R17 == 6 then Write, if R17 == 1 then Read
-EepromTalk:
+EepromRdWr:
         out EEARL,R26                     ; EEARL = address low
         out EEARH,R27                     ; EEARH = address high
         adiw R27:R26,1                    ; address++
@@ -614,8 +614,9 @@ L90:
         in R16,EEDR                       ; R16 = EEDR
         ret
 
-; размер должен быть 24 |----------------------|
+; Size must be 24 bytes |----------------------|
 info:             .db  "SECU-3 BLDR v1.8.[08.16]",0,0 ;[mm.yy]
+                  .db  "© 2007 A.Shabelnikov, http://secu-3.org",0
 
 ; [andreika]: fix 'Relative branch out of reach' compile error in some cases
 StartProgram:
