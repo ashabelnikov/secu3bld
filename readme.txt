@@ -34,10 +34,9 @@ mentioned utils.
   build.bat         build script (creates binary file)
   build.sh          Linux version of build.bat script
   load.bat          script for loading into device (using ISP)
-  m16def.inc        --
-  m32def.inc        device specific header files (used by build)
-  m64def.inc        --
+  m64def.inc        device specific header files (used by build)
   m644def.inc       --
+  m1284def.inc      --
   license           contains GNU GPL license
   make_c_array.bat  script for creating of C-array from boot loader's binary
   make_c_array.sh   Linux version of make_c_array.bat script

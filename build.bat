@@ -8,7 +8,7 @@ rem Note: It requires avrasm2 AVR assembler from Atmel
 
 set ASSEMBLER=avrasm2.exe
 set HEXTOBIN=hextobin.exe
-set USAGE=Supported options: M16,M32,M64,M644
+set USAGE=Supported options: M64,M644,M1284
 set PLATFORM=Undefined
 
 IF "%1" == "" (
@@ -18,16 +18,6 @@ exit 1
 )
 
 rem Check validity of command line option
-IF %1 == M16 ( 
-set PLATFORM=_PLATFORM_M16_
-GOTO assemble
-)
-
-IF %1 == M32 ( 
-set PLATFORM=_PLATFORM_M32_
-GOTO assemble
-)
-
 IF %1 == M64 ( 
 set PLATFORM=_PLATFORM_M64_
 GOTO assemble
@@ -35,6 +25,11 @@ GOTO assemble
 
 IF %1 == M644 ( 
 set PLATFORM=_PLATFORM_M644_
+GOTO assemble
+)
+
+IF %1 == M1284 ( 
+set PLATFORM=_PLATFORM_M1284_
 GOTO assemble
 )
 

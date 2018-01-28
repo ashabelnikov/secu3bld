@@ -7,7 +7,7 @@
 
 ARRAYMAKER=bintoarray.exe
 HEXTOBIN=hextobin.exe
-USAGE="Supported options: M16,M32,M64,M644"
+USAGE="Supported options: M64,M644,M1284"
 BL_ADDR=Undefined
 BL_SIZE=Undefined
 
@@ -24,21 +24,17 @@ then
 fi
 
 #Check validity of command line option and set corresponding parameters
-if [ $1 = "M16" ]
-then
- BL_ADDR=3E00
- BL_SIZE=512
-elif [ $1 = "M32" ]
-then
- BL_ADDR=7C00
- BL_SIZE=1024
-elif [ $1 = "M64" ]
+if [ $1 = "M64" ]
 then
  BL_ADDR=F800
  BL_SIZE=2048
 elif [ $1 = "M644" ]
 then
  BL_ADDR=F800
+ BL_SIZE=2048
+elif [ $1 = "M1284" ]
+then
+ BL_ADDR=1F800
  BL_SIZE=2048
 else
  echo "Invalid platform!"

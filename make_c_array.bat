@@ -7,7 +7,7 @@ rem Created by Alexey A. Shabelnikov, Kiev 28 August 2010.
 
 set ARRAYMAKER=bintoarray.exe
 set HEXTOBIN=hextobin.exe
-set USAGE=Supported options: M16,M32,M64,M644
+set USAGE=Supported options: M64,M644,M1284
 set BL_ADDR=Undefined
 set BL_SIZE=Undefined
 
@@ -18,18 +18,6 @@ exit 1
 )
 
 rem Check validity of command line option and set corresponding parameters
-IF %1 == M16 ( 
-set BL_ADDR=3E00
-set BL_SIZE=512
-GOTO dowork
-)
-
-IF %1 == M32 ( 
-set BL_ADDR=7C00
-set BL_SIZE=1024
-GOTO dowork
-)
-
 IF %1 == M64 ( 
 set BL_ADDR=F800
 set BL_SIZE=2048
@@ -38,6 +26,12 @@ GOTO dowork
 
 IF %1 == M644 ( 
 set BL_ADDR=F800
+set BL_SIZE=2048
+GOTO dowork
+)
+
+IF %1 == M1284 ( 
+set BL_ADDR=1F800
 set BL_SIZE=2048
 GOTO dowork
 )

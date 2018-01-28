@@ -8,7 +8,7 @@
 
 ASSEMBLER=avrasm2.exe
 HEXTOBIN=hextobin.exe
-USAGE="Supported options: M16,M32,M64,M644"
+USAGE="Supported options: M64,M644,M1284"
 PLATFORM=Undefined
 
 if [ $# -eq 0 ]
@@ -23,18 +23,15 @@ then
 fi
 
 # Check validity of command line option and set corresponding parameters
-if [ $1 = "M16" ]
-then
- PLATFORM=_PLATFORM_M16_
-elif [ $1 = "M32" ]
-then
- PLATFORM=_PLATFORM_M32_
-elif [ $1 = "M64" ]
+if [ $1 = "M64" ]
 then
  PLATFORM=_PLATFORM_M64_
 elif [ $1 = "M644" ]
 then
  PLATFORM=_PLATFORM_M644_
+elif [ $1 = "M1284" ]
+then
+ PLATFORM=_PLATFORM_M1284_
 else
  echo "Invalid platform!"
  echo $USAGE

@@ -22,10 +22,10 @@
 ; author Alexey A. Shabelnikov
 
 ; Для работы загрузчика необходимо:
-; размер загрузчика зависит от выбранной платформы (mega16, mega32, mega64, mega644).
+; размер загрузчика зависит от выбранной платформы (mega64, mega644, mega1284).
 ; BOOTRST = 0, BOOTSZ1 = 1, BOOTSZ0 = 0, JTAGEN = 1, WDTON = 1(mega64, mega644), M103C = 0(mega64).
 ; 1 - бит не запрограммирован
-; Частота кварцевого резонатора: 16.000 мГц (mega16, mega32, mega64), 20.000 мГц (mega644)
+; Частота кварцевого резонатора: 16.000 мГц (mega64), 20.000 мГц (mega644, mega1284)
 
 ; - При запуске микроконтроллера управление передается загрузчику. Проверяется состояние
 ;   линии LDR_P_INIT порта C. Если на  ней низкий уровень, то производится продолжение работы
@@ -37,6 +37,7 @@
 ;----------------------------------------------------------------------------------+
 ;   Программирование указанной страницы памяти программ                            |
 ;    !PNNdata<CS                     size      dir                                 |
+;    !PNNNdata<CS                    size      dir            (ATMega1284)         |
 ;    P    - код команды               1        in                                  |
 ;    NN   - номер страницы            1        in                                  |
 ;    data - данные страницы          256max    in                                  |
@@ -45,6 +46,7 @@
 ;----------------------------------------------------------------------------------+
 ;   Чтение указанной страницы памяти программ                                      |
 ;    !RNN<dataCS                     size      dir                                 |
+;    !RNNN<dataCS                    size      dir            (ATMega1284)         |
 ;    R    - код команды               1        in                                  |
 ;    NN   - номер страницы            1        in                                  |
 ;    data - данные страницы          256max    out                                 |
@@ -60,14 +62,14 @@
 ;   Чтение содержимого EEPROM                                                      |
 ;    !J<dataCS                       size      dir                                 |
 ;    J    - код команды               1        in                                  |
-;    data - данные EEPROM           2048max    out                                 |
+;    data - данные EEPROM           4096max    out                                 |
 ;    CS   - контрольная сумма         1        out                                 |
 ;----------------------------------------------------------------------------------+
 ;                                                                                  |
 ;   Запись запись содержимого EEPROM                                               |
 ;    !Wdata<CS                       size      dir                                 |
 ;    W    - код команды               1        in                                  |
-;    data - данные EEPROM           2048max    in                                  |
+;    data - данные EEPROM           4096max    in                                  |
 ;    CS   - контрольная сумма         1        out                                 |
 ;    после посылки каждого байта необходимо подождать 10ms                         |
 ;----------------------------------------------------------------------------------+
@@ -85,20 +87,12 @@
 ;   Eсли возникает ошибка, то загрущчик посылает в ответ <?
 ;
 
-#ifdef _PLATFORM_M16_
-.INCLUDE "m16def.inc"
-#message "ATMega16 platform used"
-#define  PLATFORM_CODE "16  "
-#elif defined(_PLATFORM_M32_)
-.INCLUDE "m32def.inc"
-#message "ATMega32 platform used"
-#define PLATFORM_CODE "32  "
-#elif defined(_PLATFORM_M64_) || defined(_PLATFORM_M644_)
-#ifdef _PLATFORM_M64_
+#if defined(_PLATFORM_M64_)
 .INCLUDE "m64def.inc"
 #message "ATMega64 platform used"
 #define PLATFORM_CODE "64  "
-#else
+
+#elif defined(_PLATFORM_M644_)
 .INCLUDE "m644def.inc"
 #message "ATMega644 platform used"
 #define PLATFORM_CODE "644 "
@@ -106,6 +100,18 @@
 .equ    WDTCR  = WDTCSR
 .equ    EEWE   = EEPE
 .equ    EEMWE  = EEMPE
+
+#elif defined(_PLATFORM_M1284_)
+.INCLUDE "m1284def.inc"
+#message "ATMega1284 platform used"
+#define PLATFORM_CODE "1284"
+.equ    SPMCR  = SPMCSR
+.equ    WDTCR  = WDTCSR
+.equ    EEWE   = EEPE
+.equ    EEMWE  = EEMPE
+
+#else
+ #error "Wrong platform identifier!"
 #endif
  ;define UART registers, because mega64 has two UARTS and mega644 has different registers naming
 .equ    UBRRL  = UBRR0L
@@ -118,10 +124,6 @@
 .equ    UCSRA  = UCSR0A
 .equ    UCSRB  = UCSR0B
 .equ    U2X    = U2X0
-
-#else
- #error "Wrong platform identifier!"
-#endif
 
 .equ    LDR_P_INIT = 3                    ; линия порта C для старта загрузчика при старте
 .equ    PAGESIZEB  = PAGESIZE*2           ; PAGESIZEB is page size in BYTES, not words
@@ -149,7 +151,7 @@
 ;       115200      0x0A          0x15
 ;       250000      0x04          0x09
 
-#ifdef _PLATFORM_M644_
+#if defined(_PLATFORM_M644_) || defined(_PLATFORM_M1284_)
 .equ    UBR        = 0x103                ; UART speed 9600 baud (Скорость UART-a)
 #else
 .equ    UBR        = 0xCF                 ; UART speed 9600 baud (Скорость UART-a)
@@ -165,8 +167,8 @@
 
         ldi   R16,0x40                    ; approx. 6.4uS at 20MHz
 pu_rise:
-        dec  R16
-        brne pu_rise                      ; wait while pull-up voltage is rising
+        dec   R16
+        brne  pu_rise                     ; wait while pull-up voltage is rising
 
         sbic  PINC,LDR_P_INIT             ; если 0 то bootloader работает дальше
         ; [andreika]: fix 'Relative branch out of reach' compile error in some cases
@@ -182,26 +184,26 @@ START_FROM_APP:
         ;инициализируем UART
 
         ldi   R24,low(UBR)                ; set Baud rate (low byte)
-#ifdef _PLATFORM_M644_
+#if defined(_PLATFORM_M644_) || defined(_PLATFORM_M1284_)
         sts  UBRRL,R24                    ; <--memory mapped
 #else
         out  UBRRL,R24
 #endif
         ldi   R24,high(UBR)               ; set Baud rate (high byte)
-#if defined(_PLATFORM_M64_) || defined(_PLATFORM_M644_)
+#if defined(_PLATFORM_M64_) || defined(_PLATFORM_M644_) || defined(_PLATFORM_M1284_)
         sts   UBRRH,R24                   ; <--memory mapped
 #else
         out   UBRRH,R24
         nop
 #endif
         ldi   R24,(1<<RXEN)|(1<<TXEN)     ; Enable receiver & transmitter, 8-bit mode
-#ifdef _PLATFORM_M644_
+#if defined(_PLATFORM_M644_) || defined(_PLATFORM_M1284_)
         sts   UCSRB,R24                   ; <--memory mapped
 #else
         out   UCSRB,R24
 #endif
         ldi   R24, (1<<U2X)               ; Use U2X to reduce baud error
-#ifdef _PLATFORM_M644_
+#if defined(_PLATFORM_M644_) || defined(_PLATFORM_M1284_)
         sts   UCSRA, R24                  ; <--memory mapped
 #else
         out   UCSRA, R24
@@ -219,6 +221,10 @@ wait_cc:
         CPI   R16,'P'
         brne  CMD100
         ; команда 'P' программирование указанной страницы памяти программ
+
+#ifdef _PLATFORM_M1284_
+        rcall recv_rampz                  ; Receive N and load it into RAMPZ register
+#endif
         rcall recv_hex                    ; R16 <--- NN
         rcall page_num                    ; Z <-- номер страницы
 
@@ -268,6 +274,9 @@ CMD100:
         brne  CMD200
         ; команда 'R'- чтение указанной страницы памяти программ
 
+#ifdef _PLATFORM_M1284_
+        rcall recv_rampz                  ; Receive N and load it into RAMPZ register
+#endif
         rcall recv_hex
         rcall page_num                    ; Z <-- номер страницы
 
@@ -281,7 +290,12 @@ CMD100:
         ; Чтение страницы в UART
         ldi   R24, low(PAGESIZEB)         ; ининиализировали счетчик
 Rdloop:  ;64(mega16, mega32), 128(mega64) итерации
+
+#if defined(_PLATFORM_M1284_)
+        elpm  R16, Z+
+#else
         lpm   R16, Z+
+#endif
         eor   R20,R16
         rcall send_hex
         subi  R24, 1
@@ -353,7 +367,7 @@ CMD400:
 
         ;ожидание завершения передачи, а затем выход
 w00:
-#ifdef _PLATFORM_M644_
+#if defined(_PLATFORM_M644_) || defined(_PLATFORM_M1284_)
         lds   R16,UCSRA                   ; <--memory mapped
         sbrs  R16,UDRE
 #else
@@ -379,7 +393,7 @@ Return:
         ;is 0 (actual only for mega 64)
 do_strt_app:
         ldi   R16, (1 << WDE)             ; 16 ms
-#ifdef _PLATFORM_M644_
+#if defined(_PLATFORM_M644_) || defined(_PLATFORM_M1284_)
         sts   WDTCR, R16                  ; <--memory mapped
 #else
         out   WDTCR, R16
@@ -395,10 +409,19 @@ CMD500:
 
         rcall sendAnswer
 
+#ifdef _PLATFORM_M1284_
+        ldi   R24, 1
+        OUT   RAMPZ, R24                  ; initialize RAMPZ register
+#endif
         ldi ZL,low(2*info)                ; стартовый адрес сообщения
         ldi ZH,high(2*info)
 isloop:
-        lpm R16,Z+                        ; string pointer (the Z-register)
+
+#if defined(_PLATFORM_M1284_)
+        elpm  R16, Z+
+#else
+        lpm   R16, Z+                     ; string pointer (the Z-register)
+#endif
         tst R16
         breq end_loop                     ; exit the character output loop if character was '\0'
         rcall uartSend                    ; send the read character via the UART
@@ -426,14 +449,14 @@ sendAnswer:
 ;читает один байт из UART и возвращает его в R16
 uartGet:
         WDR
-#ifdef _PLATFORM_M644_
+#if defined(_PLATFORM_M644_) || defined(_PLATFORM_M1284_)
         lds   R16,UCSRA                   ; <--memory mapped
         sbrs  R16,RXC
 #else
         sbis  UCSRA,RXC                   ; wait for incoming data (until RXC==1)
 #endif
         rjmp  uartGet
-#ifdef _PLATFORM_M644_
+#if defined(_PLATFORM_M644_) || defined(_PLATFORM_M1284_)
         lds   R16,UDR                     ; <--memory mapped
 #else
         in    R16,UDR                     ; return received data in R16
@@ -443,14 +466,14 @@ uartGet:
 ;записывает один байт из регистра R16 в UART
 uartSend:
         WDR
-#ifdef _PLATFORM_M644_
+#if defined(_PLATFORM_M644_) || defined(_PLATFORM_M1284_)
         lds   R17,UCSRA                   ; <--memory mapped
         sbrs  R17,UDRE
 #else
         sbis  UCSRA,UDRE                  ; wait for empty transmit buffer (until UDRE==1)
 #endif
         rjmp  uartSend
-#ifdef _PLATFORM_M644_
+#if defined(_PLATFORM_M644_) || defined(_PLATFORM_M1284_)
         sts   UDR,R16                     ; <--memory mapped
 #else
         out   UDR,R16                     ; UDR = R16, start transmission
@@ -517,8 +540,20 @@ send_hex:
         rcall uartSend                    ; передаем младший байт числа
         pop   R17
         pop   R16
-        ret 
+        ret
 
+#ifdef _PLATFORM_M1284_
+;Receive value of RAMPZ and set it
+recv_rampz:
+        push  R17
+        rcall uartGet
+        CPI   R16, '!'
+        breq  new_cmd
+        subi  R16, 0x30                 ;convert from hex to binary
+        out   RAMPZ, R16
+        pop   R17
+        ret
+#endif
 
 ;принимает два символа шестнадцатеричного числа и переводит их в двоичное
 ;результат в R16
@@ -549,13 +584,14 @@ new_cmd:
 ; x  *  *  *  *  *  *  *  *  0  0  0  0  0  0  0   mega32    (64 words, 256 pages)
 ; *  *  *  *  *  *  *  *  0  0  0  0  0  0  0  0   mega64    (128 words, 256 pages)
 ; *  *  *  *  *  *  *  *  0  0  0  0  0  0  0  0   mega644   (128 words, 256 pages)
+; *  *  *  *  *  *  *  *  0  0  0  0  0  0  0  0   mega1284  (128 words, 512 pages)
 ;
 ; x - не имеет значения
 ; * - номер страницы
 ; 0 - равны 0
 Page_num:
         mov   ZH,R16
-#if defined(_PLATFORM_M64_) || defined(_PLATFORM_M644_)
+#if defined(_PLATFORM_M64_) || defined(_PLATFORM_M644_) || defined(_PLATFORM_M1284_)
         nop
         clr   ZL
         nop
@@ -615,7 +651,7 @@ L90:
         ret
 
 ; Size must be 24 bytes |----------------------|
-info:             .db  "SECU-3 BLDR v1.8.[08.16]",0,0 ;[mm.yy]
+info:             .db  "SECU-3 BLDR v1.9.[01.18]",0,0 ;[mm.yy]
                   .db  "© 2007 A.Shabelnikov, http://secu-3.org",0
 
 ; [andreika]: fix 'Relative branch out of reach' compile error in some cases

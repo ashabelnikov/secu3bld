@@ -6,7 +6,7 @@ rem Batch file for loading of bootloader into the microcontroller.
 rem Created by Alexey A. Shabelnikov, Kiev 28 August 2010. 
 
 set PROGRAMMER=avreal32.exe
-set USAGE=Supported options: M16,M32,M64,M644
+set USAGE=Supported options: M64,M644,M1284
 set MCU=Undefined
 
 IF "%1" == "" (
@@ -16,16 +16,6 @@ exit 1
 )
 
 rem Check validity of command line option and set corresponding parameters
-IF %1 == M16 ( 
-set MCU=+atmega16
-GOTO dowork
-)
-
-IF %1 == M32 ( 
-set MCU=+atmega32
-GOTO dowork
-)
-
 IF %1 == M64 ( 
 set MCU=+atmega64
 GOTO dowork
@@ -33,6 +23,11 @@ GOTO dowork
 
 IF %1 == M644 ( 
 set MCU=+atmega644
+GOTO dowork
+)
+
+IF %1 == M1284 ( 
+set MCU=+atmega1284
 GOTO dowork
 )
 
