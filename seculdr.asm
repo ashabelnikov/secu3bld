@@ -66,12 +66,29 @@
 ;    CS   - контрольная сумма         1        out                                 |
 ;----------------------------------------------------------------------------------+
 ;                                                                                  |
-;   Запись запись содержимого EEPROM                                               |
+;   Запись содержимого EEPROM                                                      |
 ;    !Wdata<CS                       size      dir                                 |
 ;    W    - код команды               1        in                                  |
 ;    data - данные EEPROM           4096max    in                                  |
 ;    CS   - контрольная сумма         1        out                                 |
 ;    после посылки каждого байта необходимо подождать 10ms                         |
+;----------------------------------------------------------------------------------+
+;                                                                                  |
+;   Write data to EEPROM (since v2.0)                                              |
+;    !ZNNdata<CS                     size      dir                                 |
+;    Z    - code of command           1        in                                  |
+;    NN   - index of page             1        in                                  |
+;    data - Data to be wr. to EEPROM  32       in                                  |
+;    CS   - Checksum                  1        out                                 |
+;    It is necessary to wait 100ms after sending data                              |
+;----------------------------------------------------------------------------------+
+;                                                                                  |
+;   Read data from EEPROM (since v2.0)                                             |
+;    !YNN<dataCS                     size      dir                                 |
+;    Y    - code of command           1        in                                  |
+;    NN   - index of page             1        in                                  |
+;    data - Data to be rd.from EEPROM 32       out                                 |
+;    CS   - контрольная сумма         1        out                                 |
 ;----------------------------------------------------------------------------------+
 ;                                                                                  |
 ;   Передача информации о бутлоадере                                               |
@@ -84,7 +101,7 @@
 ; Данные передаваемые загрузчиКОМ начинаются с символа <
 ; size указан в байтах, в символах (передаваемых через UART) будет в 2 РАЗА больше
 ;
-;   Eсли возникает ошибка, то загрущчик посылает в ответ <?
+;   Eсли возникает ошибка, то загрузчик посылает в ответ <?
 ;
 
 #if defined(_PLATFORM_M64_)
@@ -125,8 +142,9 @@
 .equ    UCSRB  = UCSR0B
 .equ    U2X    = U2X0
 
-.equ    LDR_P_INIT = 3                    ; линия порта C для старта загрузчика при старте
+.equ    LDR_P_INIT = 3                    ; line of PORT C used for manual starting boot loader
 .equ    PAGESIZEB  = PAGESIZE*2           ; PAGESIZEB is page size in BYTES, not words
+.equ    EEPAGESIZE = 32                   ; Size of block of data used to transfer data for R/W to EEPROM
 
 ;Here are some values for UBR for 16.000 mHz crystal
 ;
@@ -152,36 +170,36 @@
 ;       250000      0x04          0x09
 
 #if defined(_PLATFORM_M644_) || defined(_PLATFORM_M1284_)
-.equ    UBR        = 0x103                ; UART speed 9600 baud (Скорость UART-a)
+.equ    UBR        = 0x103                ; UART speed is 9600 baud 
 #else
-.equ    UBR        = 0xCF                 ; UART speed 9600 baud (Скорость UART-a)
+.equ    UBR        = 0xCF                 ; UART speed is 9600 baud
 #endif
 
-        .org  SECONDBOOTSTART             ; начало кода загрузчика
-        cli                               ; прерывания не используются
+        .org  SECONDBOOTSTART             ; beginning of boot loader's code
+        cli                               ; we do not use interrupts
 
         ldi   R16,0x0C                    ; connect internal pull-up resistor
         out   PORTC,R16
         clr   R0
-        out   DDRC,R0                     ; делаем все линии порта C входами
+        out   DDRC,R0                     ; make all lines of PORTC to be inputs
 
         ldi   R16,0x40                    ; approx. 6.4uS at 20MHz
 pu_rise:
         dec   R16
         brne  pu_rise                     ; wait while pull-up voltage is rising
 
-        sbic  PINC,LDR_P_INIT             ; если 0 то bootloader работает дальше
-        ; [andreika]: fix 'Relative branch out of reach' compile error in some cases
-        rjmp  StartProgram                ; иначе старт основной программы
+        sbic  PINC,LDR_P_INIT             ; if 0, then boot loader continue to work
+        ; prevent 'Relative branch out of reach' compile error in some cases
+        rjmp  StartProgram                ; else, start main firmware
 START_FROM_APP:
-        cli                               ; если мы пришли из программы то прерывания надо обязательно запретить
-        ;инициализируем указатель стека
+        cli                               ; if we came from main firmware, then we have to disable interrupts
+        ;initialize stack pointer
         ldi   R24,low(RAMEND)             ; SP = RAMEND
         ldi   R25,high(RAMEND)
         out   SPL,R24
         out   SPH,R25
 
-        ;инициализируем UART
+        ;initialize UART
 
         ldi   R24,low(UBR)                ; set Baud rate (low byte)
 #if defined(_PLATFORM_M644_) || defined(_PLATFORM_M1284_)
@@ -209,37 +227,39 @@ START_FROM_APP:
         out   UCSRA, R24
 #endif
 
-        ;основной цикл программы - ожидание команд
+        ;main loop of program  - waiting on commands
 
-wait_cmd:    ;ожидание новой команды
+wait_cmd:    ;waiting new command
         rcall uartGet
         CPI   R16, '!'
         brne  wait_cmd
-        ; прием кода очередной команды
+        ; receiving code of pending command
 wait_cc:
         rcall uartGet
+        CPI   R16,'!'
+        breq  wait_cc                     ; do again, because marker of starting of packet has been received
         CPI   R16,'P'
         brne  CMD100
-        ; команда 'P' программирование указанной страницы памяти программ
+        ; Command 'P' programming specified page of perogram memory
 
 #ifdef _PLATFORM_M1284_
         rcall recv_rampz                  ; Receive N and load it into RAMPZ register
 #endif
         rcall recv_hex                    ; R16 <--- NN
-        rcall page_num                    ; Z <-- номер страницы
+        rcall page_num                    ; Z <-- number of page
 
         ;erase page
         ldi   R17, (1<<PGERS) | (1<<SPMEN)
         rcall Do_spm
-        ;разрешить адресацию области RWW
+        ;enable addressing of RWW section
         ldi   R17, (1<<RWWSRE) | (1<<SPMEN)
         rcall Do_spm
 
         clr   R20                         ; clear byte of check sum
-        ;Записываем данные из UART-a в буфер страницы
-        ldi   R24, low(PAGESIZEB)         ; ининиализировали счетчик (кол-во байт в странице)
+        ;Write data from UART into page's buffer
+        ldi   R24, low(PAGESIZEB)         ; initialize counter (number of bytes in page)
 
-Wr_loop:  ;64(mega16, mega32), 128(mega64) итерации - за одну итерацию два байта (одно слово)
+Wr_loop:  ;64(mega16, mega32), 128(mega64) iterations - two bytes per one iteration (one word)
         rcall recv_hex                    ; R16 <--- LO
         mov   R0,R16
         eor   R20,R16
@@ -250,11 +270,11 @@ Wr_loop:  ;64(mega16, mega32), 128(mega64) итерации - за одну итерацию два байта
 
         ldi   R17, (1<<SPMEN)
         rcall Do_spm
-        adiw  ZH:ZL,2                     ; Z+=2, переход к следующему слову в странице
-        subi  R24,  2                     ; R24-=2, уменьшили счетчик слов 
+        adiw  ZH:ZL,2                     ; Z+=2, go to the next word on page
+        subi  R24,  2                     ; R24-=2, decreased counter of words 
         brne  Wr_loop
 
-        ; восстанавливаем указатель и производим запись страницы
+        ; restoring pointer and carry out write of page
         subi  ZL, low(PAGESIZEB)          ; restore pointer
         sbci  ZH, high(PAGESIZEB)
 
@@ -267,29 +287,29 @@ Wr_loop:  ;64(mega16, mega32), 128(mega64) итерации - за одну итерацию два байта
         mov   R16,R20
         rcall send_hex
 
-        rjmp  wait_cmd                    ; на ожидание новой команды
+        rjmp  wait_cmd                    ; got to waiting on new command
        ;------------------------------------------------------------------------------
 CMD100:
         CPI   R16,'R'
         brne  CMD200
-        ; команда 'R'- чтение указанной страницы памяти программ
+        ; Command 'R'- read specified page of program memory
 
 #ifdef _PLATFORM_M1284_
         rcall recv_rampz                  ; Receive N and load it into RAMPZ register
 #endif
         rcall recv_hex
-        rcall page_num                    ; Z <-- номер страницы
+        rcall page_num                    ; Z <-- number of page
 
         rcall sendAnswer
 
-        ;разрешить адресацию области RWW
+        ;enable addressing of RWW section
         ldi   R17, (1<<RWWSRE) | (1<<SPMEN)
         rcall Do_spm
 
         clr   R20                         ; clear byte of check sum
-        ; Чтение страницы в UART
-        ldi   R24, low(PAGESIZEB)         ; ининиализировали счетчик
-Rdloop:  ;64(mega16, mega32), 128(mega64) итерации
+        ; Read of page to UART
+        ldi   R24, low(PAGESIZEB)         ; initializing counter
+Rdloop:  ;64(mega16, mega32), 128(mega64) iteration
 
 #if defined(_PLATFORM_M1284_)
         elpm  R16, Z+
@@ -310,14 +330,14 @@ Rdloop:  ;64(mega16, mega32), 128(mega64) итерации
 CMD200:
         CPI   R16,'J'
         brne  CMD300
-        ; команда 'J' - чтение EEPROM
+        ; Command 'J' - read EEPROM
 
         rcall sendAnswer
 
         clr   R20                         ; clear byte of check sum
         clr   R26
         clr   R27
-        ldi   R17,0x01                    ; чтение EEPROM
+        ldi   R17,0x01                    ; read EEPROM
 L23:
         rcall EepromRdWr
         eor   R20,R16
@@ -332,21 +352,49 @@ L23:
         rjmp  wait_cmd
         ;------------------------------------------------------------------------------
 CMD300:
-        CPI   R16,'W'
+        CPI   R16,'Y'
         brne  CMD400
-        ; команда 'W' - запись EEPROM
+        ; command 'Y' - read EEPROM in block mode
 
-        clr   R20                         ; очистили байт контрольной суммы
-        clr   R26                         ; инициализировали указатель на ячейки EEPROM
-        clr   R27                         ;
-        ldi   R17,0x06                    ; запись EEPROM
+        rcall recv_hex                    ; R16 <--- NN
+        ldi   R24, EEPAGESIZE             ; load size of page, used as counter in below loop
+        mul   R16, R24
+        mov   R27, R1                     ; R27:R26 - address of page
+        mov   R26, R0
+
+        rcall sendAnswer
+
+        clr   R20                         ; clear byte of check sum
+        ldi   R17,0x01                    ; Read EEPROM
 L24:
+        rcall EepromRdWr
+        eor   R20,R16
+        rcall send_hex
+        DEC   R24
+        BRNE  L24
+
+        ;transmit byte of check sum
+        mov   R16,R20
+        rcall send_hex
+
+        rjmp  wait_cmd
+        ;------------------------------------------------------------------------------
+CMD400:
+        CPI   R16,'W'
+        brne  CMD500
+        ; Command 'W' - write EEPROM
+
+        clr   R20                         ; clear byte of check sum
+        clr   R26                         ; initialize pointer to EEPROM cells
+        clr   R27                         ;
+        ldi   R17,0x06                    ; write EEPROM
+L25:
         rcall recv_hex
         out   EEDR,R16
         rcall EepromRdWr                  ; write
         eor   R20,R16
         cpi   R27,high(EEPROMEND+1)       ; 512? 1024? 2048?
-        BRNE  L24
+        BRNE  L25
 
         rcall sendAnswer
 
@@ -356,16 +404,56 @@ L24:
 
         rjmp  wait_cmd
         ;------------------------------------------------------------------------------
-CMD400:
+CMD500:
+        CPI   R16,'Z'
+        brne  CMD600
+        ; Command 'Z' - write EEPROM in block mode
+
+        rcall recv_hex                    ; R16 <--- NN
+        ldi   R24, EEPAGESIZE             ; load size of page, used as counter in below loop
+        mul   R16, R24
+        mov   R27, R1                     ; R27:R26 - address of page
+        mov   R26, R0
+
+        ldi   ZL, low(1024)               ; start address in RAM for writing
+        ldi   ZH, high(1024)
+L26:
+        rcall recv_hex
+        ST    Z+, R16                     ;save byte to RAM
+        subi  R24, 1
+        BRNE  L26
+
+        ldi   ZL, low(1024)               ; start address in RAM for reading
+        ldi   ZH, high(1024)
+        ldi   R24, EEPAGESIZE             ; load size of page, used as counter in below loop
+        clr   R20                         ; clear byte of checksum
+        ldi   R17,0x06                    ; запись EEPROM
+L27:
+        LD    R16, Z+
+        out   EEDR,R16
+        rcall EepromRdWr                  ; write
+        eor   R20,R16
+        subi  R24, 1
+        BRNE  L27
+
+        rcall sendAnswer
+
+        ;transmit byte of check sum
+        mov   R16,R20
+        rcall send_hex
+
+        rjmp  wait_cmd
+        ;------------------------------------------------------------------------------
+CMD600:
         CPI   R16,'T'
-        brne  CMD500
-        ; команда 'T' - выход из загрузчика (переход на $0000)
+        brne  CMD700
+        ; Command 'T' - exit from a boot loader (jump to $0000)
 
         rcall sendAnswer
         ldi   R16,'@'
-        rcall uartSend                    ; посылка подтверждения
+        rcall uartSend                    ; sending confirmation
 
-        ;ожидание завершения передачи, а затем выход
+        ;wait for completion of sending and exit
 w00:
 #if defined(_PLATFORM_M644_) || defined(_PLATFORM_M1284_)
         lds   R16,UCSRA                   ; <--memory mapped
@@ -402,10 +490,10 @@ wait_rst:
         rjmp  wait_rst
 
         ;------------------------------------------------------------------------------
-CMD500:
+CMD700:
         CPI   R16,'I'
         brne  CMD_NA
-        ;команда 'I' - передача информации о бутлоадере
+        ;Command 'I' - send information about boot loader
 
         rcall sendAnswer
 
@@ -413,7 +501,7 @@ CMD500:
         ldi   R24, 1
         OUT   RAMPZ, R24                  ; initialize RAMPZ register
 #endif
-        ldi ZL,low(2*info)                ; стартовый адрес сообщения
+        ldi ZL,low(2*info)                ; start address of the message
         ldi ZH,high(2*info)
 isloop:
 
@@ -430,7 +518,7 @@ end_loop:
         rjmp  wait_cmd
         ;------------------------------------------------------------------------------
 CMD_NA:
-        ;неизвесная команда, посылаем код ошибки
+        ;Unknown command, send error code
         rcall sendAnswer
         ldi   R16,'?'
         rcall uartSend
@@ -439,14 +527,14 @@ CMD_NA:
        ;-------------------------------------------------------------------------------
 
 
-;посылает <
+;sends <
 sendAnswer:
         ldi   R16,'<'
         rcall uartSend
         ret
 
 
-;читает один байт из UART и возвращает его в R16
+;reads one byte from UART and return it in the R16 register
 uartGet:
         WDR
 #if defined(_PLATFORM_M644_) || defined(_PLATFORM_M1284_)
@@ -463,7 +551,7 @@ uartGet:
 #endif
         ret
 
-;записывает один байт из регистра R16 в UART
+;writes one byte from R16 to UART
 uartSend:
         WDR
 #if defined(_PLATFORM_M644_) || defined(_PLATFORM_M1284_)
@@ -481,21 +569,21 @@ uartSend:
         ret
 
 
-;переводит двойчное число из R16 в шестнадцатеричное число в R17:R16
-;в этих регистрах шестнадцатеричное число представлено двумя ASCII символами
+;Converts binary number from R16 into a Hex number in R17:R16
+;In these registers Hex number is represented as two ASCII symbols
 btoh:
         push  R18
-        mov   R17,R16                     ; переводим старшую тетраду числа в HEX
-        SWAP  R17                         ; делаем старшую тетраду младшей
+        mov   R17,R16                     ; translate MS nubble of number to HEX
+        SWAP  R17                         ; swap nibbles (move MS to LS)
         andi  R17,0x0F
         cpi   R17,0x0A
-        BRLO  _b00                        ; если цифра то прибавляем 0x30, если буква то 0x37
+        BRLO  _b00                        ; if digit, then add 0x30, if letter, then add 0x37
         ldi   R18,7
         add   R17,R18
 _b00:
         ldi   R18,0x30
         add   R17,R18
-        andi  R16,0x0F                    ; переводим младшую тетраду числа в HEX
+        andi  R16,0x0F                    ; translate LS nubble of number to HEX
         CPI   R16,0x0A
         BRLO  _b01
         ldi   R18,7
@@ -507,37 +595,36 @@ _b01:
         ret
 
 
-;переводит шестнадцатеричное число из R17:R16 в двойчное в R16
-;в регистрах R17:R16 шестнадцатеричное число представлено двумя ASCII символами
+;converts Hex number from R17:R16 into a binary number in R16
+;in R17:R16 Hex number is represented with two ASCII symbols
 htob:
         push   R17
         cpi    R16,0x3A
         BRLO   _h00
-        SUBI   R16,7                      ; если буква, то вычитаем еще
-_h00:   ;цифра
+        SUBI   R16,7                      ; if letter, then substract more
+_h00:   ;digit
         subi   R16,0x30
         cpi    R17,0x3A
         BRLO   _h01
-        SUBI   R17,7                      ; если буква, то вычитаем еще
-_h01:   ;цифра
+        SUBI   R17,7                      ; if letter, then substract more
+_h01:   ;digit
         subi   R17,0x30
-        SWAP   R17                        ; в R17 старшая тетрада - на место ее...
+        SWAP   R17                        ; R17 contains MS nibble, swap ...
         OR     R16,R17
         pop    R17
         ret
 
 
-
-;переводит двоичное число из R16 в шестнадцатеричное и передает его
+;converts binary number from R16 to Hex number and send it via UART
 send_hex:
         push  R16
         push  R17
-        rcall btoh                        ; R17:R16 содержат символы HEX-числа
-        push  R16                         ; сохраняем R16 так как сначала необходимо передать старший байт
+        rcall btoh                        ; R17:R16 contain symbols of Hex-number
+        push  R16                         ; save R16 because first we have to send high byte
         mov   R16,R17
         rcall uartSend
         pop   R16
-        rcall uartSend                    ; передаем младший байт числа
+        rcall uartSend                    ; send low byte of number
         pop   R17
         pop   R16
         ret
@@ -555,30 +642,30 @@ recv_rampz:
         ret
 #endif
 
-;принимает два символа шестнадцатеричного числа и переводит их в двоичное
-;результат в R16
+;receives two symbols of Hex number and converts them to binary number
+;result in R16
 recv_hex:
         push  R17
         rcall uartGet
         CPI   R16,'!'
-        breq  new_cmd                     ; получен символ новой команды
+        breq  new_cmd                     ; symbol of new command received
         mov   R17,R16
         rcall uartGet
         CPI   R16,'!'
-        breq  new_cmd                     ; получен символ новой команды
+        breq  new_cmd                     ; symbol of new command received
         call  htob
         pop   R17
         ret
 new_cmd:
         pop   R17
-        pop   R16                         ; удаляем из стека содержимое счетчика команд
+        pop   R16                         ; delete value of program counter from a stack
         pop   R16
         rjmp  wait_cc
 
 
 
-;записывает номер страницы из R16 в Z (в соответствующие биты)
-; регистр Z
+;writes number of page from R16 to Z (into corresponding bits)
+; Z register
 ; 15 14 13 12 11 10 9  8  7  6  5  4  3  2  1  0
 ; x  x  *  *  *  *  *  *  *  0  0  0  0  0  0  0   mega16
 ; x  *  *  *  *  *  *  *  *  0  0  0  0  0  0  0   mega32    (64 words, 256 pages)
@@ -586,9 +673,9 @@ new_cmd:
 ; *  *  *  *  *  *  *  *  0  0  0  0  0  0  0  0   mega644   (128 words, 256 pages)
 ; *  *  *  *  *  *  *  *  0  0  0  0  0  0  0  0   mega1284  (128 words, 512 pages)
 ;
-; x - не имеет значения
-; * - номер страницы
-; 0 - равны 0
+; x - doesn't matter
+; * - number of page
+; 0 - equal to zero
 Page_num:
         mov   ZH,R16
 #if defined(_PLATFORM_M64_) || defined(_PLATFORM_M644_) || defined(_PLATFORM_M1284_)
@@ -605,10 +692,10 @@ Page_num:
         ret
 
 
-; Осуществдение указанной операции программирования
-; R17 - текущая операция
+; Executes specified programming operation
+; R17 - current operation
 Do_spm:
-        ;проверка зввершения предыдущей SPM операции и ожидание если не завершена
+        ;check for completion of previous operation and wait if it was not finished yet
 #ifdef _PLATFORM_M64_
         lds   R16,SPMCR                   ; <--memory mapped
 #else
@@ -618,12 +705,12 @@ Do_spm:
         WDR
         sbrc   R16, SPMEN
         rjmp   Do_spm
-        ;проверяем доступ к EEPROM и если он открыт, то ждем завершения операции
+        ;check access to EEPROM and if it is open, then wait for completion of operation
 Wait_ee:
         WDR
         sbic   EECR, EEWE
         rjmp   Wait_ee
-        ;все нормально - реализуем SPM операцию
+        ;all is OK, apply SPM operation
 #ifdef _PLATFORM_M64_
         sts   SPMCR, R17                  ; <--memory mapped
 #else
@@ -636,6 +723,7 @@ Wait_ee:
 
 ;Reads or writes from/into EEPROM
 ;if R17 == 6 then Write, if R17 == 1 then Read
+;R27:R26 - address
 EepromRdWr:
         out EEARL,R26                     ; EEARL = address low
         out EEARH,R27                     ; EEARH = address high
@@ -651,7 +739,7 @@ L90:
         ret
 
 ; Size must be 24 bytes |----------------------|
-info:             .db  "SECU-3 BLDR v1.9.[01.18]",0,0 ;[mm.yy]
+info:             .db  "SECU-3 BLDR v2.0.[03.21]",0,0 ;[mm.yy]
                   .db  "© 2007 A.Shabelnikov, http://secu-3.org",0
 
 ; [andreika]: fix 'Relative branch out of reach' compile error in some cases
